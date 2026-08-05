@@ -1,0 +1,436 @@
+syntax = "proto3";
+package axxonsoft.bl.ptz;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/ptz";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+import "axxonsoft/bl/ptz/TelemetryHelper.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+
+message MoveRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;	
+    Capabilities mode = 3;
+    double val_pan = 4;
+    double val_tilt = 5;
+}
+
+message UserSessionInformation
+{
+    string user_name = 1;
+    string host_name = 2;
+}
+
+message AcquireSessionRequest
+{
+    string access_point = 1;
+    string host_name = 2;
+}
+
+enum EErrorCode
+{
+    NotError = 0;
+    SessionUnavailable = 1;
+    GeneralError = 2;
+    PresetError = 3;
+    UnsupportedCommand = 4;
+};
+
+message AcquireSessionResponse
+{
+    int32 session_id = 1;
+    UserSessionInformation user_session_info = 2;
+    EErrorCode error_code = 3;
+
+    // each session has time frame
+    // until that time is out, each call to acquireSessionId
+    // will respond same session_id
+    // this field shows when returned session_id expires in terms of UTC 
+    google.protobuf.Timestamp expiration_time = 4;
+}
+
+message SessionRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+}
+
+message KeepAliveResponse
+{
+    bool result = 1;
+
+    // each session has time frame
+    // this field shows when returned session_id expires in terms of UTC
+    google.protobuf.Timestamp expiration_time = 2;
+}
+
+message IsSessionAvailableRequest
+{
+    string access_point = 1;
+}
+
+message IsSessionAvailableResponse
+{
+    bool is_available = 1;
+    UserSessionInformation user_session_info = 2;
+}
+
+message CommonRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;	
+    Capabilities mode = 3;
+    double value = 4;
+}
+
+message SessionID
+{
+    string access_point = 1;
+    int32 session_id = 2;
+}
+
+message AbsolutePosition
+{
+    int32 pan = 1;
+    int32 tilt = 2;
+    int32 zoom = 3;
+    int32 mask = 4;
+}
+
+message AbsolutePositionNormalized
+{
+    double pan = 1;
+    double tilt = 2;
+    double zoom = 3;
+    int32 mask = 4;
+}
+
+message AbsoluteMoveRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    AbsolutePosition absolute_position = 3;
+}
+
+message AbsoluteMoveNormalizedRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    AbsolutePositionNormalized absolute_position = 3;
+}
+
+message GetPositionInformationRequest
+{
+    string access_point = 1;
+}
+
+message GetPositionInformationResponse
+{
+    AbsolutePosition absolute_position = 1;
+    EErrorCode error_code = 2;
+}
+
+message GetPositionInformationNormalizedResponse
+{
+    AbsolutePositionNormalized absolute_position = 1;
+}
+
+message SetPresetRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    int32 position = 3;
+    string label = 4;
+}
+
+message SetPresetResponse
+{
+    EErrorCode error_code = 1;
+}
+
+message PointMoveRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    primitive.Point point = 3;
+}
+
+message AreaZoomRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    primitive.Rectangle rectangle = 3;
+}
+
+message PresetCollectionResponse
+{
+    enum EErrorCode
+    {
+        NotError = 0;
+        XDeviceBusyError = 1;
+    };
+
+    repeated PresetInfo preset_info = 1;
+    EErrorCode error_code = 2;
+}
+
+message Preset
+{
+    string label = 1;
+    bool saved_on_device = 2;
+    int32 absolute_pan = 3;
+    int32 absolute_tilt = 4;
+    int32 absolute_zoom = 5;
+}
+
+message GetPresetsInfoRequest
+{
+    string access_point = 1;
+}
+
+message ConfigurePresetRequest
+{
+    string access_point = 1;
+    int32 position = 2;
+    Preset preset = 3;
+}
+
+message GoPresetRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    int32 position = 3;
+    double speed = 4;
+}
+
+message RemovePresetRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    int32 position = 3;
+}
+
+message GetAuxiliaryOperationsRequest
+{
+    string access_point = 1;
+}
+
+message GetAuxiliaryOperationsResponse
+{
+    repeated string operations = 1;
+}
+
+message PerformAuxiliaryOperationRequest
+{
+    string access_point = 1;
+    int32 session_id = 2;
+    string operation = 3;
+}
+
+message PerformAuxiliaryOperationResponse
+{
+}
+
+message GetToursRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+}
+
+message GetToursResponse
+{
+    enum EErrorCode
+    {
+        NotError = 0;
+        XDeviceBusyError = 1;
+    };
+    enum ETourState
+    {
+        TOUR_STATE_UNSPECIFIED = 0;
+        EIdle = 1;
+        ETouring = 2;
+        EPaused = 3;
+        EExtended = 4;
+    };
+    message Tour
+    {
+        string name = 1;
+        ETourState state = 2;
+    }
+    EErrorCode error_code = 1;
+    repeated Tour tours = 2; 
+}
+
+message GetTourPointsRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+    
+    // should be get by AcquireSessionId call
+    string tour_name = 2;
+}
+
+message PresetInfo {
+    string label = 1;
+    int32 position = 2;
+    string name = 3;
+    bool saved_on_device = 4;
+    int32 absolute_pan = 5;
+    int32 absolute_tilt = 6;
+    int32 absolute_zoom = 7;
+}
+
+message PresetCollection {
+    repeated PresetInfo preset_info = 1;
+}
+
+message GetTourPointsResponse
+{
+    enum EErrorCode
+    {
+        NotError = 0;
+        XDeviceBusyError = 1;
+    };
+
+    PresetCollection preset_collection = 1;
+    EErrorCode error_code = 2;
+}
+
+message PlayTourRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+    
+    // should be get by AcquireSessionId call
+    int32 session_id = 2;
+
+    // could be create by startFillTour, setFillTour, stopFillTour
+    string tour_name = 3;
+}
+
+message PlayTourResponse {
+    EErrorCode error_code = 1; 
+};
+
+message StopTourRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+    
+    // should be get by AcquireSessionId call (with 10 second expiration time)
+    int32 session_id = 2;
+
+    // could be create by startFillTour, setFillTour, stopFillTour
+    string tour_name = 3;
+}
+
+message StopTourResponse {
+    EErrorCode error_code = 1; 
+};
+
+message StartFillTourRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+    
+    // should be get by AcquireSessionId call (with 10 second expiration time)
+    int32 session_id = 2;
+
+    // could be create by startFillTour, setFillTour, stopFillTour
+    string tour_name = 3;
+}
+
+message StartFillTourResponse {
+    EErrorCode error_code = 1; 
+};
+
+message SetTourPointRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+    
+    // should be get by AcquireSessionId call (with 10 second expiration time)
+    int32 session_id = 2;
+    string preset_name = 3;
+    int32 dwell_time = 4;
+    int32 move_speed = 5;
+}
+
+message SetTourPointResponse {
+    EErrorCode error_code = 1; 
+};
+
+message StopFillTourRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+    
+    // should be get by AcquireSessionId call (with 10 second expiration time)
+    int32 session_id = 2;
+
+    // could be create by startFillTour, setFillTour, stopFillTour
+    string tour_name = 3;
+}
+
+message StopFillTourResponse {
+    EErrorCode error_code = 1; 
+};
+
+message RemoveTourRequest {
+    // could access by domain.proto -> listCameras -> ptz
+    string access_point = 1;
+    
+    // should be get by AcquireSessionId call (with 10 second expiration time)
+    int32 session_id = 2;
+
+    // could be create by startFillTour, setFillTour, stopFillTour
+    string tour_name = 3;
+}
+
+message RemoveTourResponse {
+    EErrorCode error_code = 1; 
+};
+
+service TelemetryService
+{
+    rpc AcquireSessionId(AcquireSessionRequest) returns (AcquireSessionResponse);
+    rpc KeepAlive(SessionRequest) returns (KeepAliveResponse);
+    // TODO: rename methods and structs
+    rpc ReleaseSessionId(SessionRequest) returns (google.protobuf.Empty);
+    rpc IsSessionAvailable(IsSessionAvailableRequest) returns (IsSessionAvailableResponse);
+    rpc Move(MoveRequest) returns (google.protobuf.Empty);
+    rpc Zoom(CommonRequest) returns (google.protobuf.Empty);
+    rpc Focus(CommonRequest) returns (google.protobuf.Empty);
+    rpc FocusAuto(SessionID) returns (google.protobuf.Empty);
+    rpc Iris(CommonRequest) returns (google.protobuf.Empty);	
+    rpc IrisAuto(SessionID) returns (google.protobuf.Empty);
+    rpc AbsoluteMove(AbsoluteMoveRequest) returns (google.protobuf.Empty);
+    rpc AbsoluteMoveNormalized(AbsoluteMoveNormalizedRequest) returns (google.protobuf.Empty); // Operates with normalized positions in range {0;1}
+    rpc GetPositionInformation(GetPositionInformationRequest) returns (GetPositionInformationResponse);
+    rpc GetPositionInformationNormalized(GetPositionInformationRequest) returns (GetPositionInformationNormalizedResponse); // Returns normalized positions in range {0;1}
+    rpc SetPreset(SetPresetRequest) returns (google.protobuf.Empty);
+    rpc SetPreset2(SetPresetRequest) returns (SetPresetResponse);
+    rpc ConfigurePreset(ConfigurePresetRequest) returns (google.protobuf.Empty);
+    rpc GoPreset(GoPresetRequest) returns (google.protobuf.Empty);
+    rpc RemovePreset(RemovePresetRequest) returns (google.protobuf.Empty);
+    rpc PointMove(PointMoveRequest) returns (google.protobuf.Empty);
+    rpc AreaZoom(AreaZoomRequest) returns (google.protobuf.Empty);
+    rpc GetPresetsInfo(GetPresetsInfoRequest) returns (PresetCollectionResponse);
+    rpc GetAuxiliaryOperations(GetAuxiliaryOperationsRequest) returns (GetAuxiliaryOperationsResponse);
+    rpc PerformAuxiliaryOperation(PerformAuxiliaryOperationRequest) returns (PerformAuxiliaryOperationResponse);
+
+    // TODO:
+    // TagTrackTrackers
+    // TagTrackPriority
+    // DiscreteOverContinous
+    // FollowTrack
+    // IStateControl Patrol
+    // MoveToCoords
+
+    rpc GetTours(GetToursRequest) returns (GetToursResponse);
+    rpc GetTourPoints(GetTourPointsRequest) returns (GetTourPointsResponse);
+    rpc PlayTour(PlayTourRequest) returns (PlayTourResponse);
+    rpc StopTour(StopTourRequest) returns (StopTourResponse);
+    rpc StartFillTour(StartFillTourRequest) returns (StartFillTourResponse);
+    rpc SetTourPoint(SetTourPointRequest) returns (SetTourPointResponse);
+    rpc StopFillTour(StopFillTourRequest) returns (StopFillTourResponse);
+    rpc RemoveTour(RemoveTourRequest) returns (RemoveTourResponse);
+}

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YTN 라이브 · RIC HLS</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js"></script>
+  <script>
+    // HLS.js 로드 실패 시 보조 CDN을 순차적으로 시도합니다. Chrome/Edge에서는 HLS.js가 우선입니다.
+    (function ensureHlsJs() {
+      if (window.Hls) return;
+      const candidates = [
+        'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.18/hls.min.js',
+        'https://unpkg.com/hls.js@1.5.18/dist/hls.min.js'
+      ];
+      let i = 0;
+      function loadNext() {
+        if (window.Hls || i >= candidates.length) return;
+        const s = document.createElement('script');
+        s.src = candidates[i++];
+        s.async = false;
+        s.onerror = loadNext;
+        document.head.appendChild(s);
+      }
+      window.addEventListener('load', loadNext, { once: true });
+    })();
+  </script>
+  <style>
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
+    .stage { position:relative; width:100%; height:100%; background:#000; }
+    video { width:100%; height:100%; display:block; background:#000; object-fit:contain; }
+    .status { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:rgba(2,6,23,.72); color:#e2e8f0; font-family:system-ui, sans-serif; text-align:center; padding:20px; }
+    .status.hidden { display:none; }
+    .spinner { width:34px; height:34px; border:3px solid rgba(148,163,184,.25); border-top-color:#60a5fa; border-radius:50%; animation:spin 1s linear infinite; }
+    .msg { font-size:18px; font-weight:800; }
+    .sub { font-size:12px; color:#94a3b8; }
+    .audio-toggle {
+      position:absolute; right:14px; bottom:14px; z-index:8;
+      border:1px solid rgba(148,163,184,.45); border-radius:999px;
+      padding:8px 12px; background:rgba(15,23,42,.82); color:#e2e8f0;
+      font-size:12px; font-weight:800; cursor:pointer; backdrop-filter:blur(6px);
+      box-shadow:0 8px 24px rgba(0,0,0,.35);
+    }
+    .audio-toggle:hover { background:rgba(30,41,59,.95); }
+    .ric-hls-badge { position:absolute; left:10px; bottom:10px; z-index:7; padding:4px 8px; border-radius:999px; background:rgba(15,23,42,.72); color:#93c5fd; font:700 11px system-ui,sans-serif; pointer-events:none; }
+    .audio-toggle.on { border-color:rgba(34,197,94,.75); color:#dcfce7; }
+    body.dashboard-cursor-hidden .audio-toggle { opacity:.22; }
+    body.dashboard-cursor-hidden, body.dashboard-cursor-hidden * { cursor:none !important; }
+    @keyframes spin { from { transform:rotate(0deg);} to { transform:rotate(360deg);} }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <video id="video" autoplay muted playsinline disablePictureInPicture controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"></video>
+    <button id="audioToggle" class="audio-toggle" type="button" title="YTN 음성 켜기">🔇 음성 켜기</button>
+    <div class="ric-hls-badge">RIC HLS · video1</div>
+    <div id="status" class="status">
+      <div class="spinner"></div>
+      <div id="statusMsg" class="msg">YTN 라이브 준비 중...</div>
+      <div id="statusSub" class="sub">RTSP+ 상시 변환 스트림을 확인하는 중입니다.</div>
+    </div>
+  </div>
+  <script>
+    const HLS_API = `${location.protocol === 'https:' ? 'https:' : 'http:'}//${location.hostname || 'localhost'}:8080`;
+    function joinUrl(base, path = '') {
+      const b = String(base || '').trim().replace(/\/+$/, '');
+      const p = String(path || '').trim();
+      if (!p) return b;
+      return `${b}/${p.replace(/^\/+/, '')}`;
+    }
+    const params = new URLSearchParams(location.search);
+    const camId = (params.get('camId') || 'video1').trim() || 'video1';
+    const directSrc = (params.get('src') || '').trim();
+    const liveBufferMarginSec = Math.max(1.5, Math.min(10, Number(params.get('liveDelay') || params.get('liveBuffer') || 3) || 3));
+    const video = document.getElementById('video');
+    const audioToggle = document.getElementById('audioToggle');
+    const statusEl = document.getElementById('status');
+    const statusMsg = document.getElementById('statusMsg');
+    const statusSub = document.getElementById('statusSub');
+    let hls = null;
+    let playerUrl = '';
+    let recoveryTimer = null;
+    let liveGuardTimer = null;
+    let lastVideoTime = 0;
+    let lastVideoMoveAt = Date.now();
+    let lastBufferSeekAt = 0;
+    const bufferSeekCooldownMs = 15000;
+    let consecutiveHlsErrors = 0;
+    let userAudioEnabled = false;
+    function updateAudioButton() {
+      if (!audioToggle) return;
+      const on = !video.muted && Number(video.volume || 0) > 0;
+      audioToggle.classList.toggle('on', on);
+      audioToggle.textContent = on ? '🔊 음성 끄기' : '🔇 음성 켜기';
+      audioToggle.title = on ? 'YTN 음성 끄기' : 'YTN 음성 켜기';
+    }
+    async function setAudioEnabled(enabled) {
+      userAudioEnabled = Boolean(enabled);
+      video.muted = !userAudioEnabled;
+      video.defaultMuted = !userAudioEnabled;
+      if (userAudioEnabled) video.volume = 1.0;
+      updateAudioButton();
+      try { await video.play(); } catch {}
+    }
+    if (audioToggle) {
+      audioToggle.addEventListener('click', () => setAudioEnabled(video.muted || Number(video.volume || 0) <= 0));
+      video.addEventListener('volumechange', updateAudioButton);
+      updateAudioButton();
+    }
+    let bootToken = 0;
+    function setStatus(msg, sub='') { statusMsg.textContent = msg; statusSub.textContent = sub; statusEl.classList.remove('hidden'); }
+    function hideStatus() { statusEl.classList.add('hidden'); }
+    function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+    async function apiPost(url, body) {
+      const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || `POST failed: ${url}`);
+      return data;
+    }
+    async function waitForM3U8(url, timeoutMs = 45000, intervalMs = 1000) {
+      const end = Date.now() + timeoutMs;
+      while (Date.now() < end) {
+        try {
+          const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_ts=' + Date.now(), { cache:'no-store' });
+          if (r.ok) return true;
+        } catch {}
+        await wait(intervalMs);
+      }
+      return false;
+    }
+    function withCacheBuster(url) {
+      return url + (url.includes('?') ? '&' : '?') + '_reload=' + Date.now();
+    }
+    function isExplicit404HlsError(data) {
+      const responseCode = Number(data?.response?.code || data?.networkDetails?.status || 0);
+      return responseCode === 404;
+    }
+    function isSegmentOrPlaylistNetworkError(data) {
+      const details = String(data?.details || '').toLowerCase();
+      const responseCode = Number(data?.response?.code || data?.networkDetails?.status || 0);
+      return responseCode === 404 || details.includes('frag') || details.includes('level') || details.includes('manifest') || details.includes('network');
+    }
+    function scheduleHardReload(reason, delayMs = 1500) {
+      if (recoveryTimer) return;
+      setStatus('YTN 라이브 재연결 중...', `${reason || 'HLS 오류'} · 최신 재생목록으로 다시 연결합니다.`);
+      recoveryTimer = setTimeout(() => {
+        recoveryTimer = null;
+        destroyPlayer();
+        boot();
+      }, delayMs);
+    }
+    function reloadCurrentSource(reason) {
+      if (!hls || !playerUrl) {
+        scheduleHardReload(reason, 1000);
+        return;
+      }
+      try {
+        hls.stopLoad();
+        hls.loadSource(withCacheBuster(playerUrl));
+        hls.startLoad(-1);
+      } catch {
+        scheduleHardReload(reason, 1000);
+      }
+    }
+    function destroyPlayer(){
+      stopLiveGuard();
+      if (recoveryTimer) { clearTimeout(recoveryTimer); recoveryTimer = null; }
+      try { if (hls) hls.destroy(); } catch {}
+      hls = null;
+      try { video.pause(); } catch {}
+      video.muted = !userAudioEnabled;
+      video.defaultMuted = !userAudioEnabled;
+      if (userAudioEnabled) video.volume = 1.0;
+      updateAudioButton();
+      video.removeAttribute('src');
+      try { video.load(); } catch {}
+    }
+    function noteVideoAlive(reason = 'video') {
+      const ct = Number(video.currentTime || 0);
+      if (Math.abs(ct - lastVideoTime) > 0.15) {
+        lastVideoTime = ct;
+        lastVideoMoveAt = Date.now();
+      }
+    }
+    function finiteDuration() {
+      const d = Number(video.duration);
+      return Number.isFinite(d) && d > 0 ? d : 0;
+    }
+    function keepBehindLiveEdge(reason = 'live-buffer-margin') {
+      const dur = finiteDuration();
+      const ct = Number(video.currentTime || 0);
+      if (!dur || !Number.isFinite(ct)) return false;
+      const now = Date.now();
+      // V77.12: 정상 재생 중에는 live edge에 가깝다는 이유만으로 currentTime을
+      // dur-3초로 되감지 않습니다. V77.09~11의 YTN 패널 3초 반복은
+      // atEdgeNoBuffer 보정이 timeupdate/FRAG 이벤트마다 반복 실행된 부작용이었습니다.
+      // 이제는 background 복귀 후 0~5초로 리셋되었거나, live edge보다 30초 이상
+      // 뒤처진 경우에만 보정합니다. stall 복구는 seekToStableLivePoint()에서 처리합니다.
+      const behindTooFar = ct < dur - 30;
+      const nearStartAfterLongRun = dur > 60 && ct < 5;
+      const shouldSeek = behindTooFar || nearStartAfterLongRun;
+      if (shouldSeek && now - lastBufferSeekAt > bufferSeekCooldownMs) {
+        const target = Math.max(0, dur - liveBufferMarginSec);
+        if (Math.abs(target - ct) > 0.5) {
+          try {
+            video.currentTime = target;
+            lastBufferSeekAt = now;
+            lastVideoTime = target;
+            lastVideoMoveAt = now;
+            console.info(`[YTN_BUFFER_MARGIN] target=${target.toFixed(2)} duration=${dur.toFixed(2)} margin=${liveBufferMarginSec}s reason=${reason}`);
+            setStatus('YTN 라이브 위치 보정 중...', `처음/오래된 위치가 감지되어 live 위치로 이동합니다.`);
+            setTimeout(hideStatus, 900);
+            return true;
+          } catch (err) {
+            console.warn('[YTN_BUFFER_MARGIN_FAIL]', err);
+          }
+        }
+      }
+      return false;
+    }
+    function seekToStableLivePoint(reason = 'player-stall') {
+      const dur = finiteDuration();
+      let target = Number.NaN;
+      if (dur) target = Math.max(0, dur - liveBufferMarginSec);
+      if (!Number.isFinite(target) && hls) {
+        try { target = Number(hls.liveSyncPosition); } catch {}
+        if (!Number.isFinite(target)) { try { target = Number(hls?.latencyController?.liveSyncPosition); } catch {} }
+      }
+      if (Number.isFinite(target) && target >= 0) {
+        try {
+          video.currentTime = target;
+          lastVideoTime = target;
+          lastVideoMoveAt = Date.now();
+          console.info(`[YTN_LIVE_RECOVER] target=${target.toFixed(2)} reason=${reason}`);
+        } catch {}
+      }
+      try { if (hls && typeof hls.startLoad === 'function') hls.startLoad(Number.isFinite(target) ? target : -1); } catch {}
+      try { if (hls && typeof hls.recoverMediaError === 'function') hls.recoverMediaError(); } catch {}
+      try { const p = video.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); } catch {}
+    }
+    function resumeFromBackground(reason = 'background-resume') {
+      console.info(`[YTN_BACKGROUND_RESUME] reason=${reason}`);
+      const corrected = keepBehindLiveEdge(reason);
+      // V77.12: background/focus 복귀 시에도 정상 재생 위치를 무조건 dur-3초로
+      // 되감지 않습니다. 0~5초 리셋 또는 30초 이상 지연일 때만 seek하고,
+      // 그 외에는 loading/play만 재개합니다.
+      try { if (hls && typeof hls.startLoad === 'function') hls.startLoad(-1); } catch {}
+      try { const p = video.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); } catch {}
+      setTimeout(() => keepBehindLiveEdge(reason + ':delayed'), 1200);
+    }
+    function startLiveGuard() {
+      if (liveGuardTimer) clearInterval(liveGuardTimer);
+      lastVideoTime = Number(video.currentTime || 0);
+      lastVideoMoveAt = Date.now();
+      liveGuardTimer = setInterval(() => {
+        noteVideoAlive('timer');
+        keepBehindLiveEdge('timer');
+        const stalledMs = Date.now() - lastVideoMoveAt;
+        const readyState = Number(video.readyState || 0);
+        const dur = finiteDuration();
+        const ct = Number(video.currentTime || 0);
+        if (stalledMs > 8000 && readyState >= 2) {
+          console.warn(`[YTN_PLAYER_STALL] stalled=${Math.round(stalledMs/1000)}s current=${ct.toFixed(2)} duration=${dur.toFixed(2)} readyState=${readyState}`);
+          setStatus('YTN 라이브 재동기화 중...', 'FFmpeg는 유지하고 player만 안정 지점으로 이동합니다.');
+          seekToStableLivePoint('timer-stall');
+        }
+      }, 2000);
+    }
+    function stopLiveGuard() {
+      if (liveGuardTimer) { clearInterval(liveGuardTimer); liveGuardTimer = null; }
+    }
+    function isSafariNativeHlsBrowser() {
+      const ua = navigator.userAgent || '';
+      const vendor = navigator.vendor || '';
+      return /Safari/i.test(ua) && /Apple/i.test(vendor) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS|Android/i.test(ua);
+    }
+    function startPlayback(url){
+      destroyPlayer();
+      playerUrl = url;
+      consecutiveHlsErrors = 0;
+      if (window.Hls && window.Hls.isSupported()) {
+        hls = new Hls({
+          lowLatencyMode: false,
+          // V77.09: YTN은 live edge에 딱 붙으면 '재생시간=영상길이' 상태로 멈춤/재생을 반복할 수 있어
+          // 초 단위 live delay를 사용해 3초 안팎의 안전 버퍼를 유지합니다.
+          liveSyncDuration: liveBufferMarginSec,
+          liveMaxLatencyDuration: Math.max(10, liveBufferMarginSec * 4),
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          manifestLoadingTimeOut: 10000,
+          fragLoadingTimeOut: 12000,
+          fragLoadingMaxRetry: 6,
+          manifestLoadingMaxRetry: 6,
+          levelLoadingMaxRetry: 6
+        });
+        hls.loadSource(withCacheBuster(url));
+        hls.attachMedia(video);
+        startLiveGuard();
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.muted = !userAudioEnabled;
+          video.defaultMuted = !userAudioEnabled;
+          if (userAudioEnabled) video.volume = 1.0;
+          updateAudioButton();
+          video.play().catch(() => {});
+        });
+        hls.on(Hls.Events.FRAG_LOADED, () => { consecutiveHlsErrors = 0; hideStatus(); });
+        hls.on(Hls.Events.FRAG_CHANGED, () => { consecutiveHlsErrors = 0; hideStatus(); noteVideoAlive('FRAG_CHANGED'); });
+        hls.on(Hls.Events.LEVEL_LOADED, () => { keepBehindLiveEdge('LEVEL_LOADED'); });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          console.warn('[YTN HLS ERROR]', data);
+          const networkish = isSegmentOrPlaylistNetworkError(data);
+          if (!data?.fatal) {
+            if (networkish) {
+              consecutiveHlsErrors += 1;
+              if (consecutiveHlsErrors >= 3) reloadCurrentSource('segment/playlist 404 또는 지연');
+              else { try { hls.startLoad(-1); } catch {} }
+            }
+            return;
+          }
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            consecutiveHlsErrors += 1;
+            if (consecutiveHlsErrors >= 2) reloadCurrentSource('네트워크 오류');
+            else { try { hls.startLoad(-1); } catch { scheduleHardReload('네트워크 오류', 1000); } }
+            return;
+          }
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            try { hls.recoverMediaError(); } catch { scheduleHardReload('미디어 오류', 1000); }
+            return;
+          }
+          scheduleHardReload('복구 불가 HLS 오류', 1000);
+        });
+        return;
+      }
+      if (isSafariNativeHlsBrowser() && video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = withCacheBuster(url);
+        startLiveGuard();
+        video.play().catch(() => {});
+        return;
+      }
+      throw new Error('HLS.js가 로드되지 않았습니다. 네트워크/CDN 접근 또는 hls.js 스크립트 로드를 확인하세요.');
+    }
+    async function boot(){
+      const myToken = ++bootToken;
+      try {
+        let hlsUrl = directSrc;
+        if (!hlsUrl) {
+          setStatus('YTN 라이브 스트림 요청 중...', camId);
+          const requested = await apiPost(joinUrl(HLS_API, '/api/streams/request'), { camId });
+          hlsUrl = requested?.sourceType === 'hls' ? requested.hls : joinUrl(HLS_API, requested.hls);
+          if (requested?.waitForReady) {
+            setStatus('YTN 라이브 스트림 준비 중...', hlsUrl);
+            const ready = await waitForM3U8(hlsUrl.startsWith('http') ? hlsUrl : joinUrl(HLS_API, hlsUrl));
+            if (!ready) throw new Error('YTN 라이브 HLS 준비 시간 초과');
+          }
+        }
+        if (!/^https?:/i.test(hlsUrl)) hlsUrl = joinUrl(HLS_API, hlsUrl);
+        if (myToken !== bootToken) return;
+        setStatus('YTN 라이브 재생 시작...', hlsUrl);
+        startPlayback(hlsUrl);
+        hideStatus();
+      } catch (err) {
+        console.error('[YTN LIVE]', err);
+        setStatus('YTN 라이브 재시도 대기 중...', `${err?.message || String(err)} · 5초 후 재시도합니다.`);
+        destroyPlayer();
+        setTimeout(boot, 5000);
+      }
+    }
+    video.addEventListener('timeupdate', () => { noteVideoAlive('timeupdate'); keepBehindLiveEdge('timeupdate'); });
+    video.addEventListener('playing', () => { noteVideoAlive('playing'); hideStatus(); });
+    video.addEventListener('waiting', () => { keepBehindLiveEdge('waiting'); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeFromBackground('visibilitychange'); });
+    window.addEventListener('focus', () => resumeFromBackground('window-focus'));
+    window.addEventListener('pageshow', () => resumeFromBackground('pageshow'));
+    (function initCursorAutoHide(idleMs) {
+      let hideTimer = null;
+      const showCursor = () => {
+        document.body.classList.remove('dashboard-cursor-hidden');
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => document.body.classList.add('dashboard-cursor-hidden'), idleMs);
+      };
+      ['mousemove','mousedown','mouseup','mouseenter','mouseleave','wheel','touchstart','touchmove','pointermove','keydown'].forEach((evt) => {
+        window.addEventListener(evt, showCursor, { passive: true });
+      });
+      showCursor();
+    })(10000);
+    boot();
+  </script>
+</body>
+</html>

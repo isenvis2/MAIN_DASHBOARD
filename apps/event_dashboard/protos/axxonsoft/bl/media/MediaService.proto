@@ -1,0 +1,168 @@
+syntax = "proto3";
+package axxonsoft.bl.media;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/media";
+
+import "axxonsoft/bl/media/Media.proto";
+
+message MediaRequest
+{
+    uint32 count = 1;
+    repeated QualityOfServiceRequest qos = 3;
+
+    /* accepted only on initial request, subsequent values ignored */
+    EndpointRef endpoint = 2;
+
+    // During initial request client can propose channel idle timeout,
+    // server is responsible to respond with StreamConfig message
+    // that contains actual channel timeout.
+    // To keep channel alive peers need to keep sending packets when
+    // channel is idle:
+    //      * client sends empty MediaRequest message
+    //      * server sends special HeartBeat message
+    int32 proposed_channel_idle_ms = 16;
+};
+
+message StreamConfig
+{
+    // see MediaRequest.proposed_channel_idle_ms for more info. 
+    int32 max_channel_idle_ms = 1;
+}
+
+message MediaSample
+{
+    message Body
+    {
+        // TODO: grpc handles 4mb per packet max
+        // split media samples to multiple packets.
+        bytes body = 1;
+    }
+    message HeartBeat{};
+
+    oneof data
+    {
+        Body body = 1;
+        HeartBeat heartbeat = 2;
+        StreamConfig config_update = 16;
+    }
+};
+
+message RequestConnectionData
+{
+    uint32 pid = 1;
+    string host_id = 2;
+    repeated ENetworkTransport transport_preferences = 3; 
+    repeated QualityOfServiceRequest qos = 4;
+};
+
+message RequestConnectionRequest
+{
+    // end-client process ID
+    EndpointRef endpoint = 1;
+    RequestConnectionData data = 2;
+};
+
+message RequestConnectionResponse
+{
+    string cookie = 1;
+    ConnectionInfo connection_info = 2;
+};
+
+message RequestQoSRequest
+{
+    EndpointRef endpoint = 1;
+    string cookie = 2;
+    repeated QualityOfServiceRequest qos = 3;
+}
+
+message RequestQoSResponse
+{
+}
+
+
+message AwaitConnectionRequest
+{
+    message Init
+    {
+        EndpointRef endpoint = 1;
+        int32 priority = 2;
+        int32 proposed_channel_idle_ms = 16;
+    }
+
+    oneof data
+    {
+        Init init_req = 1;
+        // Sent in response of AwaitConnectionResponse.request_connection
+        RequestConnectionResponse connection_resp = 2;
+    }
+}
+
+message AwaitConnectionResponse
+{
+    message RequestQoS
+    {
+        repeated QualityOfServiceRequest qos = 1;
+    }
+    
+    oneof data
+    {
+        RequestConnectionData request_connection = 1;
+        RequestQoS request_qos = 2;
+        StreamConfig config_update = 16;
+    }
+
+}
+
+message ConnectEndpointRequest
+{
+    message Context
+    {
+        string source_endpoint = 1;
+        string sink_endpoint = 2;
+        string state_control = 3;
+        int32 priority = 4;
+    }
+
+    oneof data
+    {
+        // first messege of the stream
+        Context request = 1;
+        // continue or break connection
+        bool keepalive = 2;
+    }
+}
+
+message ConnectEndpointResponse
+{
+    enum EStatus
+    {
+        // when connection or keepalive is successfully done
+        DONE = 0;
+        // when sink is busy
+        BUSY = 1;
+        // when connection is lost
+        LOST = 2;
+        // when some error occurs
+        FAIL = 3;
+    }
+    // status of the last request
+    EStatus status = 1;
+    // max delay to send keepalive request (ConnectEndpointRequest.keepalive)
+    int32 keepalive_ms = 2;
+}
+
+service MediaService
+{
+    // TODO: rename PullStream(stream PullStreamRequest) returns (stream PullStreamResponse)
+    rpc Stream(stream MediaRequest) returns (stream MediaSample);
+
+    // NGP Endpoint interface
+    rpc RequestConnection(RequestConnectionRequest) returns (RequestConnectionResponse);
+    rpc RequestQoS(RequestQoSRequest) returns (RequestQoSResponse);
+
+    // NGP SinkEndpoint interface (SinkEndpoint.idl)
+    rpc AwaitConnection(stream AwaitConnectionRequest) returns (stream AwaitConnectionResponse);
+
+    // Connect multimedia producer to multimedia consumer. For example, an audio stream of microphone/player to a speaker of server/camera
+    rpc ConnectEndpoint(stream ConnectEndpointRequest) returns (stream ConnectEndpointResponse);
+}

@@ -1,0 +1,36 @@
+/* Intentionally left blank. Tailwind is loaded via CDN in index.html */
+
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body.dashboard-cursor-hidden,
+body.dashboard-cursor-hidden * {
+  cursor: none !important;
+}
+
+
+body.news-embed-mode {
+  overflow: hidden;
+}
+
+body.news-embed-mode main {
+  padding-top: 0 !important;
+}
+
+
+/* Hide scrollbars while keeping programmatic scrolling */
+html, body, #root, body.news-embed-mode, body.news-embed-mode * {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+body.news-embed-mode::-webkit-scrollbar,
+body.news-embed-mode *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}

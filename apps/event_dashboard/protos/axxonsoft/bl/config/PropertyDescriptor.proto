@@ -1,0 +1,143 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+import "axxonsoft/bl/config/PropertyAttribute.proto";
+import "axxonsoft/bl/primitive/Color.proto";
+import "axxonsoft/bl/primitive/Font.proto";
+import "axxonsoft/bl/primitive/KeyWords.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "google/protobuf/wrappers.proto";
+
+message PropertyDescriptor
+{
+	// Property identifier.
+	string id = 1;
+	// Property display name. If this attribute is absent, then id is used instead.
+	string name = 2;
+	// Property description (if any).
+	string description = 5;
+	// Specifies the name of the category in which to group the property when displayed.
+	string category = 8;
+	// Property type: string, int32, double, bool and so on.
+	string type = 3;
+	// Whether this param is read-only.
+	bool readonly = 4;
+	
+	// Auxiliary flag for service use by clients.
+	// Indicates that client should hide this property from users.
+	bool internal = 6;
+
+	// Additional characteristics of the property.
+	repeated PropertyAttribute attributes = 9;
+
+	// Localized (user-friendly) value.
+	// If not empty, should be displayed instead of actual value.
+	google.protobuf.StringValue display_value = 7;
+
+	oneof value {
+		string value_string = 20;
+		int32 value_int32 = 21;
+		double value_double = 22;
+		bool value_bool = 23;
+		primitive.Rectangle value_rectangle = 24;
+		primitive.Polyline value_polyline = 25;
+		primitive.Mask value_mask = 26;
+		primitive.HsvColorRange value_hsv_color_range = 27;
+		int64 value_int64 = 28;
+		uint64 value_uint64 = 29;
+		primitive.LineSegment         value_line_segment = 30;
+		primitive.VerticalLineSegment value_vertical_line_segment = 31;
+		primitive.LineString           value_line_string = 32;
+		primitive.LineStringWithNormal value_line_string_with_normal = 33;
+		primitive.SimplePolygon           value_simple_polygon = 34;
+		primitive.SimplePolygonWithNormal value_simple_polygon_with_normal = 35;
+		primitive.SectoredRectangle value_sectored_rectangle = 36;
+		primitive.Circles value_circles = 37;
+		primitive.RelatedZones value_related_zones = 38;
+		primitive.Point value_point = 39;
+		primitive.Color value_color = 40;
+		primitive.Font value_font = 41;
+		primitive.KeyWords value_key_words = 42;
+
+		PropertyDescriptorGroup value_properties = 49;
+		primitive.CalibrationInfo value_calibration_info = 52;
+	}
+
+	oneof constraints {
+		RangeConstraint range_constraint = 50;
+		EnumerationConstraints enum_constraint = 51;
+
+		// TODO: add other constraints
+	}
+}
+
+message PropertyDescriptorGroup
+{
+	repeated PropertyDescriptor properties = 1;
+}
+
+message RangeConstraint
+{
+	// Minimum property value.
+	oneof min {
+		int32 min_int = 1;
+		double min_double = 2;
+		int64 min_int64 = 3;
+		uint64 min_uint64 = 4;
+	};
+	// Maximum property value
+	oneof max {
+		int32 max_int = 10;
+		double max_double = 11;
+		int64 max_int64 = 12;
+		uint64 max_uint64 = 13;
+	};
+    
+	// Default property value
+	oneof default {
+		int32 default_int = 20;
+		double default_double = 21;
+		int64 default_int64 = 22;
+		uint64 default_uint64 = 23;
+	};
+}
+
+message EnumerationConstraints
+{
+	// A list of possible values along with properties, active when particular item value is selected.
+	repeated EnumerationConstraintsItem items = 1;
+    
+	oneof default {
+		string default_string = 20;
+		int32 default_int32 = 21;
+		double default_double = 22;
+		bool default_bool = 23;
+		int64 default_int64 = 24;
+		uint64 default_uint64 = 25;
+		PropertyDescriptorGroup value_property_group = 26;
+	}
+}
+
+message EnumerationConstraintsItem
+{
+	// A localization key (user-friendly name) for this value.
+	string name = 1;
+	// Actual item value
+	oneof value {
+		string value_string = 20;
+		int32 value_int32 = 21;
+		double value_double = 22;
+		bool value_bool = 23;
+		int64 value_int64 = 24;
+		uint64 value_uint64 = 25;
+		PropertyDescriptorGroup value_property_group = 26;
+	}
+
+	// A set of properties that characterize a value.
+	repeated PropertyDescriptor traits = 2;
+
+	// Nested (dependent) properties descriptor.
+	repeated PropertyDescriptor properties = 50;
+}

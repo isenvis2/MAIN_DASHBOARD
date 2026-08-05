@@ -1,0 +1,31 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+import "axxonsoft/bl/security/GroupsPermissions.proto";
+
+message GroupPermissionsInfo
+{
+    string id = 1;
+    string display_name = 2;
+
+    GroupPermissions group_permissions = 5;
+    bool has_children = 6;
+    bool inherited =  7;
+}
+
+message ListGroupsPermissionsInfoRequest
+{
+	// Parent group id.
+    string parent = 1;
+    string role_id = 2;
+    string page_token = 3;
+    int32 page_size = 4; 
+}
+
+message ListGroupsPermissionsInfoResponse
+{
+    repeated GroupPermissionsInfo items = 1;
+    string next_page_token = 2;
+}

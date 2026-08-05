@@ -1,0 +1,284 @@
+syntax = "proto3";
+package axxonsoft.bl.mmexport;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/mmexport";
+
+import "google/api/annotations.proto";
+import "google/protobuf/duration.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+// Requires its coordinates being set in range [0.0; 1.0].
+message ViewArea
+{
+    float left   = 1;
+    float top    = 2;
+    float right  = 3;
+    float bottom = 4;
+}
+
+message FocusObject
+{
+    string item = 1;   // guid of object in DB
+    string image = 2;  // guid of image in DB
+    ViewArea area = 3; // place of object on the frame
+};
+
+// Requires its coordinates being set in range [0.0; 1.0].
+message ColorInfo
+{
+    float red   = 1;
+    float green = 2;
+    float blue  = 3;
+    float alpha = 4;
+}
+
+message MaskSpace
+{
+    repeated primitive.SimplePolygon space = 1;
+}
+
+enum ECameraPlace
+{
+    CP_CEILING = 0;
+    CP_WALL    = 1;
+    CP_GROUND  = 2;
+}
+
+enum EFisheyeDisplay
+{
+    FD_PTZ       = 0;
+    FD_PERIMETER = 1;
+}
+
+message FisheyeInfo
+{
+    float left   = 1;
+    float top    = 2;
+    float right  = 3;
+    float bottom = 4;
+    float fov = 5;
+    float pan  = 6;
+    float tilt = 7;
+    float view_angle = 8;
+    int32 dest_width  = 9;
+    int32 dest_height = 10;
+    ECameraPlace camera_place = 11;
+    // "Standart", "AutoCalibrated", etc.
+    string camera_lens = 12;
+    EFisheyeDisplay display_mode = 13;
+}
+
+enum EPdfLayout
+{
+    PL_PORTRAIT  = 0;
+    PL_LANDSCAPE = 1;
+}
+
+enum EQuality
+{
+    C_BEST_QUALITY = 0;
+    C_FINE_QUALITY = 1;
+    C_GOOD_QUALITY = 2;
+    C_NORMAL       = 3;
+    C_SMALL_SIZE   = 4;
+    C_TINY_SIZE    = 5;
+    C_BEST_SIZE    = 6;
+}
+
+enum EVideoCodec
+{
+    VC_DEFAULT = 0;
+    VC_MJPEG = 1;
+    VC_MPEG4 = 2;
+    VC_H264 = 3;
+}
+
+enum EAudioCodec
+{
+    AC_DEFAULT = 0;
+    AC_G711 = 1;
+    AC_MP2 = 2;
+}
+
+enum EFrameFrequency
+{
+    FF_ORIGINAL = 0;
+    FF_HALF     = 1;
+    FF_QUARTER  = 2;
+    FF_OCTANT   = 3;
+}
+
+message TimeLapse
+{
+    // FPS-decimation (only key frames will be exported).
+    // Default: 0 (export with original FPS).
+    float fps = 1;
+    // Speed multiplier. If value more than 2, audio won't be exported.
+    // Default: 0 (export with original speed).
+    float speed = 2;
+}
+
+// -----------------------------------------------------------------------------
+
+message SourceSetting
+{
+    oneof setting
+    {
+        ViewArea crop_area = 1;
+        MaskSpace mask_space = 2;
+        FisheyeInfo fisheye_info = 3;
+        ViewArea text_place = 4;
+        ColorInfo text_color = 5;
+        string mask_detector = 6;
+        ColorInfo track_color = 7;
+    }
+}
+
+message SnapshotSetting
+{
+    oneof setting
+    {
+        EPdfLayout pdf_layout = 1;
+        ViewArea snapshot_place = 2;
+        ViewArea comment_place = 3;
+        ViewArea timestamp_place = 4;
+        FocusObject face_info = 5;
+        FocusObject plate_info = 6;
+    }
+}
+
+message StreamSetting
+{
+    oneof setting
+    {
+        EQuality video_quality = 1;
+        EVideoCodec video_codec = 2;
+        EQuality audio_quality = 3;
+        EAudioCodec audio_codec = 4;
+        EFrameFrequency frame_frequency = 5;
+        TimeLapse time_lapse = 6;
+        string password = 7;
+    }
+}
+
+message CommonSetting
+{
+    oneof setting
+    {
+        string comment = 1;
+        string timestamp_format = 2;
+        ViewArea text_place = 3;
+        ColorInfo text_color = 4;
+        bool burn_subtitle = 5;
+        bool apply_mask = 6;
+        bool invert_mask = 7;
+        int32 timezone = 8; // timezone offset in minutes, to convert timestamps to local time, current server timezone by default
+
+        // Custom name of the output file, usable only for storing results in export agent storage
+        // or for storing results in the specified external directory
+        string file_name = 9;
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+message LiveMode
+{
+    message Source
+    {
+        // Reference to the video source endpoint.
+        string origin = 1;
+        repeated SourceSetting settings = 2;
+        repeated string tracks = 3;
+    }
+
+    repeated Source sources = 1;
+
+    // The duration of the live stream to be exported
+    // If not specified, the export will continue until stopped by user
+    // Has effect only for stream output formats
+    google.protobuf.Duration duration = 2;
+}
+
+message ArchiveMode
+{
+    message Source
+    {
+        // Reference to the video source endpoint.
+        string origin = 1;
+        // Reference(s) to the multimedia storage(s).
+        repeated string storages = 2;
+        repeated SourceSetting settings = 3;
+        // Required only for stream output formats.
+        repeated primitive.TimeRange timeline_mask = 4;
+        repeated string tracks = 5;
+    }
+
+    repeated Source sources = 1;
+    string start_timestamp = 2;
+    // Required only for stream output formats.
+    string end_timestamp = 3;
+    // Required only for stream output formats.
+    repeated primitive.TimeRange timeline_mask = 4;
+}
+
+message SnapshotType
+{
+    enum EFormat
+    {
+        DEFAULT = 0;
+        JPEG    = 1;
+        PDF     = 2;
+    }
+
+    EFormat format = 1;
+    repeated SnapshotSetting settings = 2;
+}
+
+message StreamType
+{
+    enum EFormat
+    {
+        DEFAULT = 0;
+        MKV     = 1;
+        AVI     = 2;
+        EXE     = 3;
+        MP4     = 4;
+    }
+
+    EFormat format = 1;
+    repeated StreamSetting settings = 2;
+}
+
+message Options
+{
+    oneof mode
+    {
+        LiveMode live = 1;
+        ArchiveMode archive = 2;
+    }
+    oneof output_type
+    {
+        SnapshotType snapshot = 3;
+        StreamType stream = 4;
+    }
+    repeated CommonSetting settings = 5;
+    // Maximum size of output file.
+    // New file will be created on reaching this value.
+    uint64 max_file_size = 6;
+
+    // Upload result files to cloud. Only if the
+    // upload fails the result will be kept locally.
+    bool cloud_export = 7;
+    
+    // Store result files in export agent location.
+    // Result files will not be available to download.
+    bool store_result_by_export_agent = 8;
+
+    // Store result files in external directory.
+    // Result files will not be available for download.
+    // Result files will not be cleaned up automatically.
+    string external_directory = 9;
+    
+    string export_agent_access_point = 100;
+}

@@ -1,0 +1,121 @@
+syntax = "proto3";
+package axxonsoft.bl.cloud;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/cloud";
+
+import "google/api/annotations.proto";
+
+message BindingData
+{
+    bool is_domain_added = 1;
+    int64 domain_id = 2;
+    string cloud_url = 3;
+}
+
+message ProxyConfig
+{
+    enum EProxyType
+    {
+        PT_NONE = 0;
+        PT_HTTP = 1;
+        PT_HTTPS = 2;
+        PT_SOCKS5 = 3;
+    }
+
+    EProxyType type = 1;
+    string endpoint = 2;
+    string login = 3;
+    string password = 4;
+}
+
+message GetBindingConfigurationRequest
+{
+    enum EViewMode
+    {
+        // Only binding part
+        VM_BINDING = 0;
+
+        // Full configuration
+        VM_FULL = 1;
+    }
+
+    EViewMode view = 1;
+}
+
+message GetBindingConfigurationResponse
+{
+    BindingData binding_data = 1;
+    ProxyConfig proxy_config = 2;
+}
+
+message ChangeBindingData
+{
+    int64 domain_id = 1;
+    string auth_token = 2;
+    string cloud_public_key = 3;
+    string cloud_url = 4;
+}
+
+message ChangeBindingConfigurationRequest
+{
+    ChangeBindingData binding_data = 1;
+    ProxyConfig proxy_config = 2;
+}
+
+message ChangeBindingConfigurationResponse
+{
+}
+
+enum EDomainOperationResult
+{
+    DR_OK = 0;
+    DR_ALREADY = 1;
+    DR_INTERNAL_ERROR = 2;
+    DR_CLOUD_ERROR = 3;
+};
+
+message BindRequest
+{
+    string token = 1;
+}
+
+message BindResponse
+{
+    EDomainOperationResult result = 1;
+}
+
+message UnbindRequest
+{
+}
+
+message UnbindResponse
+{
+}
+
+service CloudService
+{
+    rpc GetBindingConfiguration(GetBindingConfigurationRequest) returns (GetBindingConfigurationResponse) {
+        option (google.api.http) = {
+            get: "/v1/cloud/config"
+        };
+    };
+
+    rpc ChangeBindingConfiguration(ChangeBindingConfigurationRequest) returns (ChangeBindingConfigurationResponse) {
+        option (google.api.http) = {
+            post: "/v1/cloud/config:change"
+            body: "*"
+        };
+    };
+	
+    rpc Bind(BindRequest) returns (BindResponse) {
+        option (google.api.http) = {
+            get: "/v1/cloud/bind"
+        };
+    };
+
+    rpc Unbind(UnbindRequest) returns (UnbindResponse) {
+        option (google.api.http) = {
+            get: "/v1/cloud/unbind"
+        };
+    };
+}

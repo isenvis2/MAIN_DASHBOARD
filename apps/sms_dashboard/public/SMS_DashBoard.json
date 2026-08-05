@@ -1,0 +1,15 @@
+{
+  "refresh_time": 600,
+  "port_number": 3000,
+  "scroll_speed": 0.5,
+  "dashboard_title": "재난안전공유플랫폼",
+  "dashboard_subtitle": "긴급문자 대시보드",
+  "org_name": "Ministry of the Interior and Safety | Emergency Alert System",
+  "data_count": 50,
+  "time_range_minutes": 240,
+  "show_cursor": false,
+  "ReportDate": 30,
+  "DisplayOnlyInterestedArea": false,
+  "scroll_pause_seconds": 5,
+  "stop_posi": 0
+}

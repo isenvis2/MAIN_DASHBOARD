@@ -1,0 +1,47 @@
+syntax = "proto3";
+package axxonsoft.bl.archive;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/archive";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+message ProbeVolumeRequest
+{
+    string volume_type = 1;
+    map<string, string> connection_params = 2; 
+    string aes_key_hex = 3;
+    string node_name = 4;
+}
+
+message ProbeVolumeResponse
+{
+    enum EProbeResultCode
+    {
+        OK = 0;
+        NOT_A_VOLUME = 1;
+        ACCESS_DENIED = 2;
+        IO_ERROR = 3;
+        ENCRYPTED = 4;
+    }
+    EProbeResultCode status_code = 1;
+
+    // non-localised error details in English for developers
+    // when status_code != 0
+    string error_details = 2;
+    string label = 3;
+    google.protobuf.Timestamp create_time = 4;
+    uint64 capacity_bytes = 5;
+    uint64 used_bytes = 6;
+    map<string, string> details = 7; 
+}
+
+service ArchiveVolumeService
+{
+    rpc ProbeVolume(ProbeVolumeRequest) returns (ProbeVolumeResponse) {
+        option (google.api.http) = {
+            post: "/v1/archive/volumes:probe"
+            body: "*"
+        };
+    }
+}

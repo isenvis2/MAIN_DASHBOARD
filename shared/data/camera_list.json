@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "maxStreams": 20,
+  "active": [
+    {
+      "id": "video1",
+      "name": "YTN 라이브",
+      "rtsp": "rtsp://admin:admin@192.168.0.52/video1+audio1",
+      "lastRequestedAt": "2026-07-24T00:18:32.524Z",
+      "alwaysOn": true,
+      "sourceType": "rtsp+"
+    },
+    {
+      "id": "cam001",
+      "name": "출입구 RTSP",
+      "rtsp": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.14/SourceEndpoint.video:0:0",
+      "lastRequestedAt": "2026-07-24T00:35:59.121Z",
+      "lastSeenAt": "2026-07-24T00:35:59.121Z",
+      "sessionId": "cam001-1784853359121-b7610285",
+      "restartToken": "cam001-1784853359121-b7610285",
+      "restartAttemptCount": 0,
+      "restartBackoffUntil": null,
+      "restartHistory": [],
+      "alwaysOn": false,
+      "sourceType": "rtsp",
+      "conversionEngine": "cpu"
+    },
+    {
+      "id": "cam002",
+      "name": "복도 RTSP",
+      "rtsp": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.16/SourceEndpoint.video:0:0",
+      "lastRequestedAt": "2026-07-24T00:36:05.308Z",
+      "lastSeenAt": "2026-07-24T00:36:05.308Z",
+      "sessionId": "cam002-1784853365308-4060f93c",
+      "restartToken": "cam002-1784853365308-4060f93c",
+      "restartAttemptCount": 0,
+      "restartBackoffUntil": null,
+      "restartHistory": [],
+      "alwaysOn": false,
+      "sourceType": "rtsp",
+      "conversionEngine": "cpu"
+    },
+    {
+      "id": "cam003",
+      "name": "사무실 RTSP",
+      "rtsp": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.17/SourceEndpoint.video:0:0",
+      "lastRequestedAt": "2026-07-24T00:36:10.971Z",
+      "lastSeenAt": "2026-07-24T00:36:10.971Z",
+      "sessionId": "cam003-1784853370971-ca50175b",
+      "restartToken": "cam003-1784853370971-ca50175b",
+      "restartAttemptCount": 0,
+      "restartBackoffUntil": null,
+      "restartHistory": [],
+      "alwaysOn": false,
+      "sourceType": "rtsp",
+      "conversionEngine": "cpu"
+    }
+  ],
+  "resetReason": "api_startup",
+  "savedAt": "2026-07-24T00:36:10.971Z",
+  "lastRequestSource": "viewer-click"
+}

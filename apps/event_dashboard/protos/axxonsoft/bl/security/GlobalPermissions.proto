@@ -1,0 +1,132 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+import "axxonsoft/bl/security/GlobalRestrictions.proto";
+import "axxonsoft/bl/security/ObjectsPermissions.proto";
+import "google/protobuf/wrappers.proto";
+
+enum EMapAccess
+{
+	MAP_ACCESS_UNSPECIFIED = 0;
+
+	MAP_ACCESS_FORBID = 10;
+	MAP_ACCESS_VIEW_ONLY = 20;
+	MAP_ACCESS_VIEW_SCALE = 30;
+	MAP_ACCESS_FULL = 40;
+}
+
+enum EFeatureAccess
+{
+	FEATURE_ACCESS_FORBID_ALL = 0;
+
+	FEATURE_ACCESS_DEVICES_SETUP = 1;
+	FEATURE_ACCESS_ARCHIVES_SETUP = 2;
+	FEATURE_ACCESS_DETECTORS_SETUP = 3;
+	// Moved to EUserRightsSetupAccess.
+	FEATURE_ACCESS_USERS_RIGHTS_SETUP = 4 [deprecated = true];
+	FEATURE_ACCESS_CHANGING_LAYOUTS = 5;
+	FEATURE_ACCESS_EXPORT = 6;
+	FEATURE_ACCESS_LAYOUTS_TAB = 7;
+	FEATURE_ACCESS_SETTINGS_SETUP = 8;
+	FEATURE_ACCESS_MINMAX_BUTTON_ALLOWED = 9;
+	FEATURE_ACCESS_SYSTEM_JOURNAL = 10;
+	FEATURE_ACCESS_DOMAIN_MANAGING_OPS = 11;
+	FEATURE_ACCESS_ADD_CAMERA_TO_LAYOUT_IN_MONITORING = 12;
+	FEATURE_ACCESS_SEARCH = 13;
+	FEATURE_ACCESS_EDIT_PTZ_PRESETS = 14;
+	FEATURE_ACCESS_PROGRAMMING_SETUP = 15;
+	FEATURE_ACCESS_WEB_UI_LOGIN = 16;
+
+	// FEATURE_ACCESS_COMMENT had turned to EBookmarkAccess
+	//FEATURE_ACCESS_COMMENT = 17;
+
+	FEATURE_ACCESS_ALLOW_BUTTON_MENU_CAMERA = 18;
+	FEATURE_ACCESS_ALLOW_SHOW_TITLES = 19;
+	FEATURE_ACCESS_SHOW_ERROR_MESSAGES = 20;
+
+	// Marks role as a guard role which has specific limitations in access to system components.
+	FEATURE_ACCESS_IS_GUARD_ROLE = 21;
+
+	FEATURE_ACCESS_ALLOW_DELETE_RECORDS = 22;
+	FEATURE_ACCESS_ALLOW_SHOW_PRIVACY_VIDEO_IN_ARCHIVE = 23;
+	FEATURE_ACCESS_ALLOW_SHOW_FACES_IN_LIVE = 24;
+	FEATURE_ACCESS_ALLOW_UNPROTECTED_EXPORT = 25;
+
+	FEATURE_ACCESS_REALTIME_RECOGNITION_SETUP = 26;
+	FEATURE_ACCESS_CONFIDENTIAL_BOOKMARKS = 27;
+	FEATURE_ACCESS_GROUP_PANEL = 28;
+	FEATURE_ACCESS_OBJECT_PANEL_AND_CAMERA_SEARCH_PANEL = 29;
+}
+
+enum EAlertAccess
+{
+	ALERT_ACCESS_UNSPECIFIED = 0;
+
+	ALERT_ACCESS_FORBID = 10;
+	ALERT_ACCESS_VIEW_ONLY = 20;
+	ALERT_ACCESS_FULL = 30;
+}
+
+enum EUnrestrictedAccess
+{
+	UNRESTRICTED_ACCESS_UNSPECIFIED = 0;
+	UNRESTRICTED_ACCESS_NO = 10;
+	UNRESTRICTED_ACCESS_YES = 20;
+}
+
+enum EBookmarkAccess
+{
+	BOOKMARK_ACCESS_UNSPECIFIED = 0;
+
+	BOOKMARK_ACCESS_NO = 10;
+	BOOKMARK_ACCESS_CREATE = 20;
+	BOOKMARK_ACCESS_CREATE_PROTECT = 30;
+	BOOKMARK_ACCESS_CREATE_PROTECT_EDIT_DELETE = 40;
+}
+
+enum EUserRightsSetupAccess
+{
+	USER_RIGHTS_SETUP_ACCESS_UNSPECIFIED = 0;
+
+	USER_RIGHTS_SETUP_ACCESS_NO = 10;
+	USER_RIGHTS_SETUP_ACCESS_DEVICES_RIGHTS_ONLY = 20; // Access to devices right setup.
+	USER_RIGHTS_SETUP_ACCESS_ALL = 30; // Access to user and devices rights setup.
+}
+
+message ArchiveViewRestrictions
+{
+	google.protobuf.UInt64Value depth_hours = 1;
+}
+
+message GlobalPermissions
+{
+	EUnrestrictedAccess unrestricted_access = 1;
+
+	EMapAccess maps_access = 3;
+
+	repeated EFeatureAccess feature_access = 4;
+
+    // Add access/usage limitations to parts of the system
+    GlobalRestrictions restrictions = 19;
+
+	EAlertAccess alert_access = 5;
+	EBookmarkAccess bookmark_access = 6;
+	EUserRightsSetupAccess user_rights_setup_access = 7;
+
+	ECameraAccess default_camera_access = 10;
+	EMicrophoneAccess default_microphone_access = 11;
+	ETelemetryPriority default_telemetry_priority = 15;
+	EArchiveAccess default_archive_access = 13;
+
+	// Default access to ACFA devices.
+	EAcfaAccess default_acfa_access = 18;
+
+	EVideowallAccess default_videowall_access = 14;
+	
+	ArchiveViewRestrictions archive_view_restrictions = 16;
+	EMacrosAccess default_macros_access = 17;
+
+	reserved 2, 12;
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>재난안전공유플랫폼 날씨 대시보드</title>
+  <link rel="stylesheet" href="/static/weather.css?v=v758" />
+</head>
+<body>
+  <header class="platform-title-header" aria-label="재난안전공유플랫폼 날씨 대시보드 타이틀">
+    <div class="platform-title-left">
+      <svg class="platform-shield" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3 5 6v5c0 4.8 3 8.2 7 10 4-1.8 7-5.2 7-10V6l-7-3Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+        <path d="M12 7v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+        <circle cx="12" cy="16.5" r="1" fill="currentColor"/>
+      </svg>
+      <div>
+        <div class="platform-title-main">재난안전공유플랫폼 <span>날씨 대시보드</span></div>
+        <div class="platform-title-sub">MINISTRY OF THE INTERIOR AND SAFETY | EMERGENCY ALERT SYSTEM</div>
+      </div>
+    </div>
+    <div class="platform-title-right">
+      <div id="platformToday" class="platform-date">-</div>
+      <div class="platform-state">REAL-TIME MONITORING ACTIVE</div>
+    </div>
+  </header>
+
+  <header class="top">
+    <h1 id="pageTitle">🌦️ 현재 날씨 + 내일 날씨</h1>
+    <div class="sub" id="updatedAt">업데이트: -</div>
+  </header>
+
+  <main id="regions" class="regions"></main>
+
+  <script src="/static/weather.js?v=v758"></script>
+
+  <script>
+    (function initCursorAutoHide(idleMs) {
+      let hideTimer = null;
+      const showCursor = () => {
+        document.body.classList.remove('dashboard-cursor-hidden');
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => document.body.classList.add('dashboard-cursor-hidden'), idleMs);
+      };
+      ['mousemove','mousedown','mouseup','mouseenter','mouseleave','wheel','touchstart','touchmove','pointermove','keydown'].forEach((evt) => {
+        window.addEventListener(evt, showCursor, { passive: true });
+      });
+      showCursor();
+    })(10000);
+  </script>
+
+</body>
+</html>

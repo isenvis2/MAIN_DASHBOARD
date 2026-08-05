@@ -1,0 +1,51 @@
+syntax = "proto3";
+package axxonsoft.bl.notifications;
+
+import "google/api/annotations.proto";
+
+option go_package = "bitbucket.org/Axxonsoft/bl/notifications";
+     
+message SendSMSRequest {
+    string access_point = 1;
+    repeated string recipients = 2;
+    string message = 3;
+}
+
+message SendSMSResponse {
+    string guid = 1;
+}
+
+message GetActionStateGSMRequest {
+    string access_point = 1;
+    string guid = 2;
+}
+
+message GetActionStateGSMResponse {
+    enum EActionStateGSM
+    {
+        AS_NONE = 0;
+        AS_EXECUTING = 1;
+        AS_SUCCEEDED = 2;
+        AS_FAILED = 3;
+    };
+    EActionStateGSM action_state = 1;
+}
+
+service GSMNotifier
+{
+    rpc SendSMS(SendSMSRequest) returns (SendSMSResponse) 
+    {
+        option (google.api.http) = {
+            post: "/v1/notifier/sms:send"
+            body: "*"
+        };
+    }
+
+    rpc GetActionStateGSM(GetActionStateGSMRequest) returns (GetActionStateGSMResponse) 
+    {
+        option (google.api.http) = {
+            post: "/v1/notifier/sms/actionstate"
+            body: "*"
+        };
+    }
+}

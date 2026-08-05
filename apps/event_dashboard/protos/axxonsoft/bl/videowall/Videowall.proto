@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package axxonsoft.bl.videowall;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/videowall";
+
+message VideowallData
+{
+    bytes data = 1;
+}
+
+message ControlData
+{
+    bytes data = 1;
+}
+
+message RegisterWallRequest
+{
+    string host_name = 1;
+    // process id
+    int64 pid = 2;
+    // per process id - videowall counter unique value of a process
+    int64 ppid = 3;
+    // arbitrary client-defined string, can encode anything here to recognize the wall
+    string name = 4;
+    // human-readable name of the wall
+    string display_name = 5;
+    VideowallData data = 6;
+	
+    string videowall_coordinator_access_point = 100;
+}
+
+message RegisterWallResponse
+{
+    string cookie = 1;
+    string wall_id = 2;
+    int64 seq_number = 3;	
+}
+
+message ChangeWallRequest
+{
+    string cookie = 1;
+    VideowallData data = 2;
+    int64 seq_number = 3;	
+}
+
+message ChangeWallResponse
+{
+    int64 new_seq_number = 1;	
+}
+
+message UnregisterWallRequest
+{
+    string cookie = 1;
+}
+
+message UnregisterWallResponse
+{
+}
+
+message WallInfo
+{
+    string host_name = 1;
+    // process id
+    int64 pid = 2;
+    // per process id - videowall counter unique value of a process
+    int64 ppid = 3;
+    // arbitrary client-defined string, can encode anything here to recognize the wall
+    string name = 4;
+    // human-readable name of the wall
+    string display_name = 5;
+    VideowallData data = 6;
+    string wall_id = 7;
+    int64 seq_number = 8;	
+}
+
+message ListWallsRequest
+{
+}
+
+message ListWallsResponse
+{
+    repeated WallInfo walls = 1;
+    repeated string unreachable_objects = 2;
+}
+
+message BatchGetWallsRequest
+{
+    repeated string wall_ids = 1;
+}
+
+message BatchGetWallsResponse
+{
+    repeated WallInfo walls = 1;
+    repeated string unreachable_objects = 2;
+}
+
+message SetControlDataRequest
+{
+    string wall_id = 1;
+    int64 seq_number = 2;	
+    ControlData data = 3;
+}
+
+message SetControlDataResponse
+{
+    int64 new_seq_number = 1;
+}
+
+message GetMyControlDataRequest
+{
+    string cookie = 1;
+}
+
+message GetMyControlDataResponse
+{
+    ControlData data = 1;
+    bool reset = 2;
+}
+
+service VideowallService
+{
+    rpc RegisterWall (RegisterWallRequest) returns (RegisterWallResponse);
+    rpc UnregisterWall (UnregisterWallRequest) returns (UnregisterWallResponse);
+    rpc ChangeWall (ChangeWallRequest) returns (ChangeWallResponse);
+    rpc ListWalls (ListWallsRequest) returns (stream ListWallsResponse);
+    rpc BatchGetWalls (BatchGetWallsRequest) returns (stream BatchGetWallsResponse);
+    rpc SetControlData (SetControlDataRequest) returns (SetControlDataResponse);
+    rpc GetMyControlData (GetMyControlDataRequest) returns (stream GetMyControlDataResponse);
+}

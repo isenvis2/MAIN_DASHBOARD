@@ -1,0 +1,75 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+
+message SharedKVRecord
+{
+    string key  = 1;
+    string revision  = 2;
+    bytes value  = 3;
+}
+
+message SharedKVRecordInfo
+{
+    string key = 1;
+    string revision = 2;
+}
+
+enum ESharedKVRecordView
+{
+    ESHKV_FULL = 0;
+    ESHKV_STRIPPED = 1;
+}
+
+message ListRecordsRequest
+{
+    string prefix = 1;
+    ESharedKVRecordView view = 2;
+}
+
+message ListRecordsResponse
+{
+    repeated SharedKVRecord items = 1;
+}
+
+message BatchGetRecordsRequest
+{
+    string prefix = 1;
+    ESharedKVRecordView view = 2;
+    repeated SharedKVRecordInfo items = 3;
+}
+
+message BatchGetRecordsResponse
+{
+    repeated SharedKVRecord items = 1;
+}
+
+message SharedKVCommitRequest
+{
+    string prefix = 1;
+    repeated SharedKVRecord set = 2;
+    repeated SharedKVRecordInfo removed = 3;
+}
+
+message SharedKVCommitResponse
+{
+    enum EErrorCode
+    {
+        EOK = 0;
+        EConflict = 1;
+    };
+
+    EErrorCode error_code = 1;
+    repeated SharedKVRecordInfo updated = 2;
+}
+
+service SharedKVStorageService
+{
+    rpc ListRecords(ListRecordsRequest) returns (ListRecordsResponse);
+    rpc BatchGetRecords(BatchGetRecordsRequest) returns (BatchGetRecordsResponse);
+    rpc Commit(SharedKVCommitRequest) returns (SharedKVCommitResponse);
+}
+
+

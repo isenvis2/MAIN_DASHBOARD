@@ -1,0 +1,55 @@
+syntax = "proto3";
+package axxonsoft.bl.settings;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/settings";
+
+import "google/protobuf/duration.proto";
+
+// Describes the settings of the data storage.
+message DataStorageSettings
+{
+    // System logs settings.
+    SystemLogsSettings system_logs_settings = 1;
+
+    // Metadata storage settings.
+    VmdaStorageSettings vmda_storage_settings = 2;
+
+    // A fingerprint used for optimistic concurrency. If none is provided
+    // on updates then the existing metadata will be blindly overwritten.
+    string etag = 3;
+}
+
+// Describes the settings of system logs storage.
+message SystemLogsSettings
+{
+    // The duration that the events need to be retained.
+    google.protobuf.Duration retention_period = 1;
+
+    // The duration that the cleanup needs to be performed.
+    google.protobuf.Duration cleanup_period = 2;
+}
+
+// Describes the settings of the metadata storage.
+message VmdaStorageSettings
+{
+    // Network location to save metadata.
+    NetworkLocation network_location = 1;
+
+    // The duration that metadata needs to be retained.
+    //
+    // If case of nil, the value should be derived from `SystemLogsSettings.retention_period`.
+    google.protobuf.Duration retention_period = 2;
+}
+
+// Describes the settings for the network location.
+message NetworkLocation
+{
+    // The network location itself.
+    string path = 1;
+
+    // The username for the credential.
+    string username = 2;
+
+    // The password for the credential. Input only.
+    string password = 3;
+}

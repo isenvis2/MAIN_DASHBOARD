@@ -1,0 +1,265 @@
+syntax = "proto3";
+
+package axxonsoft.bl.primitive;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/primitive";
+
+message Point
+{
+	double x = 1;
+	double y = 2;
+}
+
+message Circle
+{
+	Point center = 1;
+	double radius = 2;
+}
+
+message Circles
+{
+	repeated Circle circle = 1;
+}
+
+message Rectangle
+{
+	double x = 1;
+	double y = 2;
+	double w = 3;
+	double h = 4;
+    int32 index = 5;
+}
+
+message Ellipse
+{
+    Point center = 1;
+    double xr = 2;
+    double yr = 3;
+}
+
+message Size
+{
+    double height = 1;
+    double width = 2;
+}
+
+message SizeInt
+{
+    int32 height = 1;
+    int32 width = 2;
+}
+
+message TimeRange
+{
+	string begin_time = 1;
+	string end_time = 2;
+}
+
+message Mask
+{
+    uint32 width = 1;
+    uint32 height = 2;
+    repeated uint32 mask = 3;
+}
+
+enum NormalDirection
+{
+    Left = 0;
+    Right = 1;
+    Bidirectional = 2;
+}
+
+message Polyline
+{
+    repeated Point points = 1;
+    bool closed = 2;
+    NormalDirection direction = 3;
+}
+
+message LineSegment
+{
+    Point a = 1;
+    Point b = 2;
+}
+
+message VerticalLineSegment
+{
+    double x = 1;
+    double y1 = 2;
+    double y2 = 3;
+}
+
+message LineString
+{
+    repeated Point points = 1;
+}
+
+message LineStringWithNormal
+{
+    repeated Point points = 1;
+    NormalDirection normal_direction = 10;
+}
+
+message SimplePolygon
+{
+    repeated Point points = 1;
+}
+
+message SimplePolygonWithNormal
+{
+    repeated Point points = 1;
+    NormalDirection normal_direction = 10;
+}
+
+message RelatedZones
+{
+    primitive.Polyline first_polyline_zone = 1;
+    primitive.Polyline second_polyline_zone = 2;
+}
+
+message Sector
+{
+    // Determines the start point of the sector, in degrees.
+    double start_angle = 1;
+    // Determines the finish point of the sector, in degrees.
+    double finish_angle = 2;
+}
+
+// Describes a rectangle divided to zones by two sectors. Both sectors' rays
+// have a starting point in the centre of the rectangle. Angles are measured
+// in degrees from (-Y) to (+X), i.e.:
+//        0° is at ( 0; -1)
+//       90° is at ( 1;  0)
+//      180° is at ( 0;  1)
+//      270° is at (-1;  0)
+message SectoredRectangle
+{
+    Rectangle rectangle = 1;
+    Sector sector1 = 2;
+    Sector sector2 = 3;
+}
+
+message HsvColor
+{
+    // [0.0, 360.0)
+    double hue = 1;
+
+    // [0.0, 1.0]
+    double saturation = 2;
+
+    // [0.0, 1.0]
+    double value = 3;
+}
+
+message HsvColorRange
+{
+    message ValueRange
+    {
+        double min = 1;
+        double max = 2;
+    }
+
+    ValueRange hue = 1;
+    ValueRange saturation = 2;
+    ValueRange value = 3;
+}
+
+message Geometry
+{
+    enum EPrimitiveType
+    {
+        PT_NONE = 0;
+        PT_RECTANGLE = 1;
+        PT_RECTANGLE_MASK = 2;
+        PT_POINT = 3;
+        PT_ELLIPSE = 4;
+        PT_ELLIPSE_MASK = 5;
+    };
+
+    message Rectangle
+    {
+        string timestamp = 1;
+        primitive.Rectangle rectangle = 2;
+    }
+
+    message Rectangles
+    {
+        repeated Rectangle rectangles = 1;
+    }
+
+    message Ellipse
+    {
+        string timestamp = 1;
+        primitive.Ellipse ellipse = 2;
+    }
+
+    message Ellipses
+    {
+        repeated Ellipse ellipses = 1;
+    }
+
+    string guid = 1;
+    int32 alpha = 2;
+    EPrimitiveType type = 3;
+    oneof value
+    {
+        primitive.Rectangle rectangle = 11[deprecated=true]; // Use rectangles.
+        Rectangles rectangles = 16;
+        Rectangles rectangle_mask = 12;
+        primitive.Point point = 13;
+        primitive.Ellipse ellipse = 14[deprecated=true]; // Use ellipses.
+        Ellipses ellipses = 17;
+        Ellipses ellipse_mask = 15;
+    };
+}
+
+message GeoPosition
+{
+    float latitude = 1;
+    float longitude = 2;
+}
+
+message Temperature
+{
+    enum ETemperatureUnit
+    {
+        CELSIUS = 0;
+        FAHRENHEIT = 1;
+        KELVIN = 2;
+    }
+
+    double value = 1;
+    ETemperatureUnit unit = 2;
+}
+
+message Point3d
+{
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message PolylineData
+{
+    repeated Point3d points = 1;
+    bool closed = 2;
+}
+
+message CalibrationInfo
+{
+	repeated CalibrationPoint calibration_points = 1;	
+}
+
+message CalibrationPoint
+{
+    PtzPoint ptz_point = 1;
+    Point decart_point = 2;
+}
+
+message PtzPoint
+{
+    int32 pan = 1;
+    int32 tilt = 2;
+    int32 zoom = 3;
+    int32 mask = 4;
+}

@@ -1,0 +1,27 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+import "axxonsoft/bl/security/ObjectsPermissions.proto";
+import "axxonsoft/bl/security/GlobalPermissions.proto";
+
+message ObjectPermission
+{
+	string access_point = 1;
+	oneof value
+	{
+		ECameraAccess      camera_access     = 2;
+		EMicrophoneAccess  microphone_access = 3;
+		ETelemetryPriority telemetry_access  = 4;
+		EArchiveAccess     archive_access    = 5;
+		EAcfaAccess        acfa_access       = 7;
+		EVideowallAccess   videowall_access  = 6;
+	}
+}
+
+message EventPermissions
+{
+	repeated ObjectPermission required_object_permissions = 1;
+	GlobalPermissions required_global_permissions = 2;
+}

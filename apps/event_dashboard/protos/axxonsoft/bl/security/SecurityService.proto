@@ -1,0 +1,854 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "axxonsoft/bl/security/ObjectsPermissions.proto";
+import "axxonsoft/bl/security/ObjectPermissionsInfo.proto";
+import "axxonsoft/bl/security/GlobalPermissions.proto";
+import "axxonsoft/bl/security/GroupsPermissions.proto";
+import "axxonsoft/bl/security/GroupsPermissionsInfo.proto";
+import "axxonsoft/bl/security/Restrictions.proto";
+
+message Role
+{
+    string index = 1;
+    string name = 2;
+    string comment = 3;
+    string timezone_id = 4;
+    int64 cloud_id = 5;
+    string supervisor = 6;
+    string export_supervisor = 8;
+    // Restrictions applied to the role.
+    Restrictions restrictions = 7;
+}
+
+// Non-confidential information about role
+message RoleMeta
+{
+    string index = 1;
+    string name = 2;
+}
+
+message ConnectionRestrictions
+{
+    int32 web_count = 1;
+    int32 mobile_count = 2;
+}
+
+message User
+{
+    string index = 1;
+    string login = 2;
+    string name = 3;
+    string comment = 4;
+    string date_created = 5;
+    string date_expires = 6;
+    bool enabled = 7;
+
+    // DEPRECATED:
+    // Use `ldap_link.server_id` instead.
+    string ldap_server_id = 8 [deprecated=true];
+    // DEPRECATED:
+    // Use `ldap_link.dn` instead.
+    string ldap_domain_name = 9 [deprecated=true];
+
+    ConnectionRestrictions restrictions = 10;
+    string email = 11;
+    int64 cloud_id = 12;
+    map<string, string> extra_fields = 13;
+    string locked_till = 14;
+
+    // Describes a link to the LDAP-server
+    message LDAPLink
+    {
+        string server_id = 1;
+        // A nonempty username
+        string username = 2;
+        // A distinguished name (cannot be empty)
+        string dn = 3;
+    }
+    LDAPLink ldap_link = 20;
+}
+
+// Non-confidential information about user
+message UserMeta
+{
+    string index = 1;
+    string login = 2;
+}
+
+message UserAssignment
+{
+    string user_id = 1;
+    string role_id = 2;
+}
+
+message LDAPServer
+{
+    string index = 1;
+    string server_name = 2;
+    string friendly_name = 3;
+    int32 port = 4;
+    // The section of the directory where search for users is performed.
+    string base_dn = 5;
+    // A bind DN that is used for search.
+    string login = 6;
+    // A bind password that is used for search.
+    string password = 7;
+    bool use_ssl = 8;
+
+    // User search filter, see SearchMode for detailed description
+    // Used with USERS_ONLY and USERS_AND_GROUPS search mode.
+    // Should not be empty, use at least "(objectClass=person)"
+    string search_filter = 9;
+
+    // Specifies an attribute that stands for username.
+    string username_attribute = 10;
+
+    // Specifies an attribute that stands for user's distinguished name.
+    string dn_attribute = 11;
+
+    // Group search filter, see SearchMode for detailed description.
+    // Used with GROUPS_ONLY and USERS_AND_GROUPS search mode.
+    // Should not be empty, use at least "(objectClass=group)"
+    string group_search_filter = 12;
+
+    // SearchMode determines how users are imported from LDAP
+    //
+    // USERS_ONLY (default)
+    //      * subtree rooted at 'base_dn' is scanned for matches on 'search_filter'
+    //      * each matching entry is considered a user with a login in 'username_attribute'
+    //
+    // GROUPS_ONLY
+    //      * subtree rooted at 'base_dn' is scanned for matches on 'group_search_filter',
+    //        each matching entry is considered a user group
+    //      * for each 'member' DN from all matching groups:
+    //          - if member matches 'search_filter' it is considered a user with a login in 'username_attribute'
+    //
+    // USERS_AND_GROUPS:
+    //      * results from USERS_ONLY and GROUPS_ONLY searches are merged
+    //
+    enum SearchMode
+    {
+        USERS_ONLY = 0;
+        GROUPS_ONLY = 1;
+        USERS_AND_GROUPS = 2;
+    }
+    SearchMode search_mode = 13;
+
+    // UUIDs of roles. Not empty list turns on
+    // an auto-creation for new LDAP-users on their first login.
+    // Created users are automatically assigned to these roles.
+    repeated string roles_assignments_for_new_users = 15;
+
+    // DEPRECATED:
+    // Use `username_attribute` instead.
+    string login_attribute = 9999 [deprecated=true];
+};
+
+message UserPasswordAssignment
+{
+    string user_index = 1;
+
+    // Clear text password
+    string password = 2;
+
+    // Obfuscated password as base64 string
+    //
+    // See NSecurityManager::EncodePassword() for details.
+    //
+    // Use only one of 'password' or 'encoded_password',
+    // INVALID_ARGUMENT is returned when both are set.
+    //
+    // Internal use only
+    string encoded_password = 4;
+
+    // Force the user to change password at next logon
+    bool must_change_password = 5;
+
+    reserved  3;
+    reserved "expire_date";
+};
+
+// Deprecated.
+message ListConfigRequest
+{
+    option deprecated = true;
+}
+
+message PasswordPolicy
+{
+    string policy_name = 1;
+    string guid = 2;
+    int64 minimum_password_length = 3;
+    int64 maximum_password_age_days = 4;
+    int64 password_history_count = 5;
+    int64 maximum_failed_logon_attempts = 6;
+    int64 account_lockout_duration_minutes = 7;
+
+    // DEPRECATED:
+    // Use `complexity_requirements` instead.
+    bool password_must_meet_complexity_requirements = 8 [deprecated=true];
+	
+    // Complexity requirements:
+    //  The password must meet the minimum number of rules depending on its length.
+    //  Thats two rules for passwords longer than nine characters, or three otherwise.
+    //
+    //  Complexity rules:
+    //  - password contains at least one uppercase letter
+    //  - password contains at least two lowercase letters
+    //  - password contains at least three digits (0-9)
+    //  - password contains at least four special characters (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~)
+    //
+    //  Complexity rules are fixed, and cannot be changed.
+    //  This parameter has no effect on LDAP user management.
+    //
+    // Login requirements:
+    // - at least 6 symbols long
+    // - contain at least 2 digits
+    // - allow symbols: latin alphabet, digits 0-9, special characters (._@)
+	
+    enum EComplexityRequirements
+    {
+        COMPLEXITY_REQUIREMENTS_UNSPECIFIED = 0;
+        NONE = 1;
+        LOGIN_AND_PASSWORD = 2;
+        PASSWORD = 3;
+    }
+
+    EComplexityRequirements complexity_requirements = 10;
+    
+    bool forbid_multiple_user_sessions = 9;
+}
+
+message IPFilter
+{
+    string guid = 1;
+    string ipAddress = 2;
+    int64 prefix = 3;
+}
+
+enum EModificationMethod
+{
+    MM_KEEP_UNCHANGED = 0;
+    MM_OVERWRITE_DATA = 1;
+}
+
+message PasswordPoliciesModification
+{
+    EModificationMethod     method = 1;
+    repeated PasswordPolicy data   = 2;
+}
+
+message IPFiltersModification
+{
+    EModificationMethod method = 1;
+    repeated IPFilter   data   = 2;
+}
+
+message CloudPublicKeyModification
+{
+    EModificationMethod method = 1;
+    string cloud_public_key = 2;
+}
+
+// Deprecated.
+message ListConfigResponse
+{
+    option deprecated = true;
+
+    repeated Role roles = 1;
+    repeated User users = 2;
+    repeated UserAssignment user_assignments = 3;
+    repeated LDAPServer ldap_servers = 4;
+    repeated PasswordPolicy pwd_policy = 5;
+    repeated IPFilter ip_filters = 6;
+    repeated IPFilter trusted_ip_list = 7;
+    string cloud_public_key = 8;
+}
+
+message ListRolesRequest
+{
+    int32 page_size = 10;
+    string page_token = 11;
+}
+
+message ListRolesResponse
+{
+    repeated Role roles = 1;
+
+    string next_page_token = 10;
+}
+
+message ListUsersRequest
+{
+    // Optional.
+    repeated string role_ids = 1;
+
+    int32 page_size = 10;
+    string page_token = 11;
+}
+
+message ListUsersResponse
+{
+    repeated User users = 1;
+    repeated UserAssignment user_assignments = 2;
+
+    string next_page_token = 10;
+}
+
+message ListLDAPServersRequest
+{
+    int32 page_size = 10;
+    string page_token = 11;
+}
+
+message ListLDAPServersResponse
+{
+    repeated LDAPServer ldap_servers = 1;
+
+    string next_page_token = 10;
+}
+
+message GetPoliciesRequest
+{
+}
+
+// SYSTEM INTEGRITY REACTION MODES
+enum ESystemIntegrityReactionMode
+{
+    SIRM_UNDEFINED = 0; // to be able use SetConfig and don't change systemIntegrityReactionMode
+    SIRM_SHOW_WARNING_TO_ADMIN_ONLY = 1; // ignore system integrity compromization
+    SIRM_SHOW_WARNING_TO_ALL_USERS = 2; // show warning window to all users
+    SIRM_DISABLE_UI_FOR_NON_ADMIN_USERS = 3; // disable UI for non-admin users
+    SIRM_STOP_NON_VITAL_SERVICES = 4; // stop all non-vital services
+}
+
+message GetPoliciesResponse
+{
+    repeated PasswordPolicy pwd_policy = 1;
+    repeated IPFilter ip_filters = 2;
+    repeated IPFilter trusted_ip_list = 3;
+    repeated ESystemIntegrityReactionMode system_integrity_reaction_modes = 4;
+}
+
+message GetCloudConfigRequest
+{
+}
+
+message GetCloudConfigResponse
+{
+    string cloud_public_key = 1;
+}
+
+message ChangeConfigRequest
+{
+    repeated string removed_users = 1;
+    repeated string removed_roles = 2;
+    repeated string removed_ldap_servers = 3;
+    repeated UserAssignment removed_users_assignments = 4;
+
+    repeated Role modified_roles = 5;
+    repeated User modified_users = 6;
+    repeated LDAPServer modified_ldap_servers = 7;
+
+    repeated Role added_roles = 8;
+    repeated User added_users = 9;
+    repeated LDAPServer added_ldap_servers = 10;
+    repeated UserAssignment added_users_assignments = 11;
+
+    repeated UserPasswordAssignment modified_user_passwords = 12;
+
+    reserved 13 to 15;
+    PasswordPoliciesModification modified_pwd_policy = 16;
+    IPFiltersModification modified_ip_filters = 17;
+    IPFiltersModification modified_trusted_ip_list = 18;
+
+    CloudPublicKeyModification modified_cloud_public_key = 19;
+    repeated ESystemIntegrityReactionMode modified_system_integrity_reaction_modes = 20;
+}
+
+message ChangeConfigResponse
+{
+}
+
+message ListGlobalPermissionsRequest
+{
+    repeated string role_ids = 1;
+}
+
+message ListGlobalPermissionsResponse
+{
+    map<string, GlobalPermissions> permissions = 1;
+}
+
+message SetGlobalPermissionsRequest
+{
+    // NOTE:
+    // 1. You could fill in only changed permissions. Default zero value
+    //    permission (*_UNSPECIFIED) means that the permission will be kept
+    //    unchanged.
+    // 2. To reset features access, explicitly pass a corresponding array
+    //    with single item FEATURE_ACCESS_FORBID_ALL. An empty array means that
+    //    features access will be kept unchanged.
+    map<string, GlobalPermissions> permissions = 1;
+}
+
+message SetGlobalPermissionsResponse
+{
+}
+
+message ListObjectPermissionsRequest
+{
+    string role_id = 1;
+    repeated string camera_ids = 2;
+    repeated string microphone_ids = 3;
+    repeated string telemetry_ids = 4;
+    repeated string archive_ids = 5;
+    repeated string acfa_ids = 7;
+    repeated string videowall_ids = 6;
+}
+
+message ListObjectPermissionsResponse
+{
+    ObjectsPermissions permissions = 1;
+    repeated string unreachable_objects = 2;
+}
+
+message ListMacrosPermissionsRequest
+{
+    string role_id = 1;
+}
+
+message ListMacrosPermissionsResponse
+{
+    map<string /* macros_id = UUID */, EMacrosAccess> macros_access = 1;
+}
+
+message ListMacrosPermissionsPagedRequest
+{
+    string role_id = 1;
+    string page_token = 2;
+    int32 page_size = 3; 
+}
+
+message MacrosAccessData
+{
+    string /*uuid*/ id = 1;
+    EMacrosAccess access = 2;
+    bool inherited = 3;
+}
+
+message ListMacrosPermissionsPagedResponse
+{
+    repeated MacrosAccessData macros_access = 1;
+    string next_page_token = 2;
+}
+
+message SetObjectPermissionsRequest
+{
+    string role_id = 1 [deprecated = true];
+    ObjectsPermissions permissions = 2 [deprecated = true];
+    map<string /*role_id*/, ObjectsPermissions> role_to_permissions = 3;
+}
+
+message SetObjectPermissionsResponse
+{
+    repeated string failed = 1;
+}
+
+message SetMacrosPermissionsRequest
+{
+    string role_id = 1;
+    map<string /* macros_id = UUID */, EMacrosAccess> macros_access = 2;
+}
+
+message SetMacrosPermissionsResponse
+{
+}
+
+message ListUserGlobalPermissionsResponse
+{
+    map<string, GlobalPermissions> permissions = 1;
+}
+
+message SearchLDAPRequest
+{
+    string ldap_server_id = 1;
+}
+
+message SearchLDAPResponse
+{
+    message Entry
+    {
+        string username = 1;
+        string dn = 2;
+    }
+    repeated Entry entries = 1;
+}
+
+message SearchLDAPRequest2
+{
+    oneof request
+    {
+        string ldap_server_id = 1;
+        LDAPServer ldap_server= 2;
+    }
+    string page_token = 3;
+
+    // The maximum value is 1000; values above 1000 will be coerced to 1000.
+    int32 page_size = 4;
+}
+
+message SearchLDAPResponse2
+{
+    message Entry
+    {
+        string username = 1;
+        string dn = 2;
+    }
+    repeated Entry entries = 1;
+    string next_page_token = 2;
+}
+
+message CheckLoginRequest
+{
+    string login = 1;
+}
+
+message CheckLoginResponse
+{
+    enum EResult
+    {
+        UNSPECIFIED = 0;
+        TAKEN = 1;
+        FREE = 2;
+        INVALID = 3;
+    }
+
+    EResult result = 1;
+}
+
+message CheckPasswordRequest
+{
+    string user_id = 1;
+    string password = 2;
+}
+
+message CheckPasswordResponse
+{
+    enum EResult
+    {
+        OK = 0;
+        NOT_UNIQUE = 1;
+        INVALID = 2;
+    }
+
+    EResult result = 1;
+}
+
+message GetRestrictedConfigRequest
+{
+}
+
+// Non-confidential information about security configuration
+message GetRestrictedConfigResponse
+{
+    User current_user = 1;
+    repeated Role current_roles = 2;
+
+    repeated RoleMeta all_roles = 10;
+    repeated UserMeta all_users = 11;
+
+    repeated PasswordPolicy pwd_policy = 15;
+    
+    repeated ESystemIntegrityReactionMode system_integrity_reaction_modes = 20;
+}
+
+message ChangePasswordRequest
+{
+    string password = 1;
+}
+
+message ChangePasswordResponse
+{
+    enum EResult
+    {
+        // The password has been changed.
+        OK = 0;
+        
+        // The password is/was in use recently.
+        NOT_UNIQUE_PASSWORD = 1;
+
+        // The password doesn't meet complexity requirements.
+        WEAK_PASSWORD = 2;
+    }
+
+    EResult result = 1;
+}
+
+message GenGoogleAuthSecretRequest
+{
+}
+
+message GenGoogleAuthSecretResponse
+{
+    string secret_key = 1;
+}
+
+message EnableGoogleAuthRequest
+{
+    message Assignment
+    {
+        string user_index = 1;
+        string secret_key = 2;
+    }
+
+    repeated Assignment assignments = 1;
+}
+
+enum EEnableTFAResult
+{
+    ETR_OK = 0;
+    ETR_ALREADY_ENABLED = 1;
+    ETR_USER_NOT_EXIST = 2;
+    ETR_FAILURE = 3;
+}
+        
+message EnableGoogleAuthResponse
+{
+    message Assignment
+    {
+        string user_index = 1;
+        EEnableTFAResult result = 2;
+    }
+
+    repeated Assignment assignments = 1;
+}
+
+message DisableGoogleAuthRequest
+{
+    message Assignment
+    {
+        string user_index = 1;
+        string verification_code  = 2;
+    }
+
+    repeated Assignment assignments = 1;
+}
+
+enum EDisableTFAResult
+{
+    DTR_OK = 0;
+    DTR_TFA_NOT_ENABLED = 1;
+    DTR_TFA_TYPE_MISMATCH = 2;
+    DTR_WRONG_CODE = 3;
+    DTR_FAILURE = 4;
+}
+
+message DisableGoogleAuthResponse
+{
+    message Assignment
+    {
+        string user_index = 1;
+        EDisableTFAResult result = 2;
+    }
+
+    repeated Assignment assignments = 1;
+}
+
+message ListObjectsPermissionsInfoRequest
+{
+    // Required field.
+    string node_name = 1;
+    // Optional. If empty returned node child objects.
+    string parent_access_point = 2; 
+    string role_id = 3;
+    string page_token = 4;
+    // Max 50 objects.
+    int32 page_size = 5; 
+}
+
+message ListObjectsPermissionsInfoResponse
+{
+    repeated ObjectPermissionsInfo items = 1;
+    string next_page_token = 2;
+}
+
+service SecurityService
+{
+    // Deprecated. Use separate requests instead.
+    rpc ListConfig (ListConfigRequest) returns (ListConfigResponse) {
+        option deprecated = true;
+        option (google.api.http) = {
+            get: "/v1/security/config"
+        };
+    }
+
+    rpc ListRoles (ListRolesRequest) returns (ListRolesResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/roles"
+        };
+    }
+
+    rpc ListUsers (ListUsersRequest) returns (ListUsersResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/users"
+         };
+    }
+
+    rpc ListLDAPServers (ListLDAPServersRequest) returns (ListLDAPServersResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/ldapservers"
+        };
+    }
+
+    rpc GetPolicies (GetPoliciesRequest) returns (GetPoliciesResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/policies"
+        };
+    }
+
+    rpc GetCloudConfig (GetCloudConfigRequest) returns (GetCloudConfigResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/cloud/config"
+        };
+    }
+
+    rpc ChangeConfig (ChangeConfigRequest) returns (ChangeConfigResponse) {
+        option (google.api.http) = {
+            post: "/v1/security/config:change"
+            body: "*"
+        };
+    }
+
+    rpc CheckPassword (CheckPasswordRequest) returns (CheckPasswordResponse) {
+        option (google.api.http) = {
+            post: "/v1/security/checkpass"
+            body: "*"
+        };
+    }
+
+    rpc ListGlobalPermissions (ListGlobalPermissionsRequest) returns (ListGlobalPermissionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/permissions/global"
+        };
+    }
+
+    // Update global permissions for one or more roles.
+    // Partial update of global permissions is supported by leaving
+    // unchanged fields in *_UNSPECIFIED state.
+    rpc SetGlobalPermissions (SetGlobalPermissionsRequest) returns (SetGlobalPermissionsResponse) {
+        option (google.api.http) = {
+            post: "/v1/security/permissions/global:update"
+            body: "*"
+        };
+    }
+
+    rpc ListGroupsPermissions (ListGroupsPermissionsRequest) returns (ListGroupsPermissionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/permissions/groups"
+        };
+    }
+
+	    rpc ListGroupsPermissionsInfo (ListGroupsPermissionsInfoRequest) returns (ListGroupsPermissionsInfoResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/permissions/groupsInfo"
+        };
+    }
+
+    rpc SetGroupsPermissions (SetGroupsPermissionsRequest) returns (SetGroupsPermissionsResponse) {
+        option (google.api.http) = {
+            post: "/v1/security/permissions/groups:update"
+            body: "*"
+        };
+    }
+
+    rpc ListObjectPermissions (ListObjectPermissionsRequest) returns (ListObjectPermissionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/permissions/objects"
+        };
+    }
+
+    rpc ListObjectsPermissionsInfo (ListObjectsPermissionsInfoRequest) returns (ListObjectsPermissionsInfoResponse){
+        option (google.api.http) = {
+            get: "/v1/security/permissions/objectsInfo"
+        };
+    }
+
+    rpc SetObjectPermissions (SetObjectPermissionsRequest) returns (SetObjectPermissionsResponse) {
+        option (google.api.http) = {
+            post: "/v1/security/permissions/objects:update"
+            body: "*"
+        };
+    }
+
+    rpc ListMacrosPermissions (ListMacrosPermissionsRequest) returns (ListMacrosPermissionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/permissions/macros"
+        };
+    }
+
+    rpc ListMacrosPermissionsPaged (ListMacrosPermissionsPagedRequest) returns (ListMacrosPermissionsPagedResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/permissions/macrosPaged"
+        };
+    }
+
+    rpc SetMacrosPermissions (SetMacrosPermissionsRequest) returns (SetMacrosPermissionsResponse) {
+        option (google.api.http) = {
+            post: "/v1/security/permissions/macros:update"
+            body: "*"
+        };
+    }
+
+    rpc SearchLDAP (SearchLDAPRequest) returns (SearchLDAPResponse) {
+    }
+
+    rpc SearchLDAP2 (SearchLDAPRequest2) returns (SearchLDAPResponse2) {
+        option (google.api.http) = {
+            post: "/v1/security/ldap:search"
+            body: "*"
+        };
+    }
+
+    rpc GenGoogleAuthSecret (GenGoogleAuthSecretRequest) returns (GenGoogleAuthSecretResponse);
+
+    rpc EnableGoogleAuth (EnableGoogleAuthRequest) returns (EnableGoogleAuthResponse);
+
+    rpc DisableGoogleAuth (DisableGoogleAuthRequest) returns (DisableGoogleAuthResponse);
+
+    // -------------------------------
+    // Methods for unprivileged users:
+    // -------------------------------
+
+    rpc CheckLogin (CheckLoginRequest) returns (CheckLoginResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/checklogin"
+        };
+    }
+
+    rpc ListUserGlobalPermissions (google.protobuf.Empty) returns (ListUserGlobalPermissionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/permissions/global/user"
+        };
+    }
+
+    rpc GetRestrictedConfig (GetRestrictedConfigRequest) returns (GetRestrictedConfigResponse) {
+        option (google.api.http) = {
+            get: "/v1/security/config/user"
+        };
+    }
+
+    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
+        option (google.api.http) = {
+            post: "/v1/security/password:change"
+            body: "*"
+        };
+    }
+
+}
+

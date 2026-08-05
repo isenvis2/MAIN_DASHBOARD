@@ -1,0 +1,612 @@
+syntax = "proto3";
+package axxonsoft.bl.maps;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/maps";
+
+import "google/api/annotations.proto";
+import "axxonsoft/bl/maps/MapProvider.proto";
+import "axxonsoft/bl/security/GlobalPermissions.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "axxonsoft/bl/primitive/Color.proto";
+
+message FieldOfView
+{
+    double angle = 1;
+    primitive.Point direction = 2;
+}
+
+// Describes link between points.
+message ImmersionModePointsLink
+{
+    // Unique ID (GUID) of the link.
+    string id = 5;
+
+    // Point on the video frame in normalized [0, 1] coordinates relative
+    // to upper-left corner.
+    primitive.Point video_point = 1;
+    // Point on the video monitor view in normalized [0, 1] coordinates relative
+    // to upper-left corner.
+    primitive.Point video_monitor_view_point = 2;
+    // Point on the map plane in normalized [-1, 1] coordinates.
+    primitive.Point map_point = 3;
+    // Point on the map relative to the map's center
+    primitive.Point3d map_relative_position = 4;
+}
+
+message ImmersionData
+{
+    // Map position
+    primitive.Point position = 1;
+    // Map zoom
+    bool has_zoom = 2;
+    int32 zoom = 3;
+    // Link points
+    repeated ImmersionModePointsLink links = 10;
+}
+
+message VideoFrameArrangement
+{
+    // Incline in radians.
+    double incline = 1;
+    // Relative distance of video frame from camera marker.
+    double distance = 2;
+    // Angle in radians between bisector of camera sector
+    // and line from video camera marker to extreme (left or right - no matter)
+    // boundary of video frame.
+    double angle = 3;
+}
+
+message CameraMarker
+{
+    FieldOfView field_of_view = 1;
+    ImmersionData immersion = 2;
+    VideoFrameArrangement video_frame_arrangement = 3;
+    bool video_on = 4;
+}
+
+message RelayMarker
+{
+}
+
+message SensorMarker
+{
+}
+
+message MicrophoneMarker
+{
+}
+
+message SpeakerMarker
+{
+}
+
+message DeviceNodeMarker
+{
+    // Line/area points
+    primitive.PolylineData points = 5;
+
+    repeated string visual_keys = 6;
+
+    enum EDeviceNodeDrawingMode
+    {
+        NORMAL = 0;
+        OPEN_UNDER_MOUSE = 1;
+        ALWAYS_OPEN = 2;
+    }
+
+    EDeviceNodeDrawingMode drawing_mode = 7;
+}
+
+message ComponentMarker
+{
+    enum EPinEdge
+    {
+        PIN_EDGE_NONE = 0;
+        PIN_EDGE_LEFT = 1;
+        PIN_EDGE_TOP = 2;
+        PIN_EDGE_RIGHT = 3;
+        PIN_EDGE_BOTTOM = 4;
+    }
+    
+    // Parent component name.
+    string parent_component_name = 1;
+    // Component name to which pinned.
+    string pinned_to = 2;
+    // Edge of object to which pinned.
+    EPinEdge pinned_to_edge = 3;
+    // Index of entity in pinned to camera entities column.
+    int32 pin_to_camera_index = 4;
+    // Distance from video camera.
+    int32 distance = 5;
+    // Marker details corresponding to the type of the component marker.
+    oneof type
+    {
+        RelayMarker relay_marker = 10;
+        SensorMarker sensor_marker = 11;
+        DeviceNodeMarker device_node_marker = 12;
+        MicrophoneMarker microphone_marker = 13;
+        SpeakerMarker speaker_marker = 14;
+    }
+}
+
+message TransitionMarker
+{
+    // Map ID for transition.
+    string linked_map_id = 1;
+}
+
+message ImmersionModeMarker
+{
+}
+
+message MacroMarker
+{
+    bool show_buttons = 1;
+}
+
+message CounterMarker
+{
+    primitive.PolylineData points = 1;
+    primitive.Color color = 2;
+}
+
+// Represents a marker displayed on the map.
+message Marker
+{
+    // Relative position of the marker on the map.
+    primitive.Point position = 1;
+
+    // Name of a component (camera, sensor, etc.) that associated with this marker.
+    // For `TransitionMarker` contains unique ID of the transition (marker) itself.
+    // For `ImmersionModeMarker` contains unique ID (GUID) of the corresponding immersion link.
+    string component_name = 2;
+
+    // Flag indicating whether to display marker's title or not.
+    bool display_title = 3;
+
+    //Domain id of associated component
+    string component_domain = 4;
+    // Position of the marker on the map
+    primitive.Point3d position_3d = 5;
+
+    // Marker details corresponding to the type of the marker
+    oneof type
+    {
+        CameraMarker camera_marker = 10;
+        ComponentMarker component_marker = 11;
+        TransitionMarker transition_marker = 12;
+        ImmersionModeMarker immersion_mode_marker = 13;
+        MacroMarker macro_marker = 14;
+        CounterMarker counter_marker = 15;
+    }
+}
+
+message Region
+{
+    primitive.Point min_corner = 1;
+    primitive.Point max_corner = 2;
+}
+
+// Collapsed markers group
+message MarkerGroup
+{
+    // Contained markers average position.
+    primitive.Point position = 1;
+
+    // Contained markers min-max coords.
+    Region boundary_region = 2;
+
+    // Contained markers count.
+    uint32 total_count = 3;
+    uint32 count_of_camera_markers = 4;
+    uint32 count_of_component_markers = 5;
+    uint32 count_of_transition_markers = 6;
+    uint32 count_of_immersion_mode_markers = 7;
+}
+
+message MapImageMeta
+{
+    string file_name = 1;
+    string mime_type = 2;
+    primitive.Size size = 3;
+    // Image resource name
+    string name = 4;
+    // Image size in bytes
+    uint64 size_bytes = 5;
+}
+
+enum EMapType
+{
+    MAP_TYPE_RASTER = 0;
+    MAP_TYPE_GEO = 1;
+}
+
+message Viewpoint
+{
+    // 'center' is a position of the map viewer.
+    primitive.Point3d center = 1;
+
+    // 'orientation' is a point, connected with the 'center' forms a ray i.e.viewing direction.
+    primitive.Point3d orientation = 2;
+
+    // 'zoom' is scale of the map.
+    double zoom = 3;
+}
+
+message Map
+{
+    // Name of the map
+    string name = 1;
+    EMapType type = 2;
+    primitive.Point position = 3;
+    int32 zoom = 4;
+
+    // ID of the map provider that should be used for visualization on clients.
+    // 
+    // NOTE: Availability of the map provider (and/or related map types) on the server is not guaranteed.
+    //       The server lists only registered map providers.
+    //       The ID may be used by a client that is not intended to register its supported map provider/type on the server (for some reason).
+    string provider_id = 5;
+
+    // ID of the map type related to the corresponding map provider that should be used for visualization on clients.
+    string map_type_id = 12;
+
+    MapImageMeta image_meta = 6;
+
+    primitive.Point3d position_3d = 7;
+    primitive.Point3d size = 8;
+    double angle = 9;
+    string parent_id = 10;
+
+    primitive.Point base_geo_position = 11;
+
+    // 'viewpoint' is a point from which a viewer observes the map, also it is a direction (or angle of view to the map) and scale.
+    Viewpoint viewpoint = 13;
+
+    // 'icon_scale' is a multiplier which is used by client to set size of an icon on the map.
+    double icon_scale = 14;
+}
+
+message Sharing
+{
+    enum ESharingKind
+    {
+        SHARING_KIND_ANY = 0;
+        SHARING_KIND_SPECIFIC_ROLES = 1;
+        SHARING_KIND_NOT_SHARED = 2;
+    }
+
+    // User (subject) ID of the owner
+    string owner = 1;
+    ESharingKind kind = 2;
+    repeated string shared_roles = 3;
+}
+
+message MapMeta
+{
+    // Map unique ID
+    string id = 1;
+    // Map access for current user (subject)
+    security.EMapAccess access = 2;
+    // Map's sharing
+    Sharing sharing = 3;
+
+    // Name of the map
+    string name = 10;
+    EMapType type = 11;
+
+    // Current map packet version (empty when map is being created)
+    string etag = 15;
+    string image_etag = 16;
+}
+
+message MapFull
+{
+    MapMeta meta = 1;
+    Map data = 2;
+}
+
+message MapImage
+{
+    MapImageMeta meta = 1;
+    bytes data = 2;
+
+    // Current image packet version
+    string etag = 15;
+}
+
+enum EViewMode
+{
+    // Include only map meta info
+    VIEW_MODE_ONLY_META = 0;
+    // Full map information
+    VIEW_MODE_FULL = 1;
+}
+
+message ListMapsRequest
+{
+    EViewMode view = 1;
+}
+
+message ListMapsResponse
+{
+    repeated MapFull items = 1;
+}
+
+message BatchGetMapsRequest
+{
+    repeated string map_ids = 1;
+}
+
+message BatchGetMapsResponse
+{
+    repeated MapFull items = 1;
+    repeated string failed_map_ids = 2;
+}
+
+message CreateMap
+{
+    string id = 1;
+    // NOTE: If omitted, applying default sharing (the map will not be shared).
+    // You may pass nonempty owner's ID to delegate ownership of the map for 
+    // specific user. Otherwise, current user will be an owner.
+    Sharing sharing = 2;
+    Map map = 3;
+    bytes image_data = 4;
+    repeated Marker markers = 5;
+}
+
+message UpdateMap
+{
+    string etag = 1;
+    string map_id = 2;
+    Map map = 3;
+}
+
+message UpdateMapSharing
+{
+    string etag = 1;
+    string map_id = 2;
+    // NOTE: Don't forget to pass nonempty owner ID.
+    // Otherwise, ownership will be passed to current user.
+    Sharing sharing = 3;
+}
+
+message UpdateMapImage
+{
+    // Map ETag
+    string etag = 1;
+    string map_id = 2;
+    // Note: don't forget to pass image ETag
+    MapImage image = 3;
+}
+
+message UpdateMapsOrder
+{
+    string map_id = 1;
+    int32 position = 2;
+}
+
+message ChangeMapsRequest
+{
+    repeated CreateMap created = 1;
+    repeated UpdateMap updated = 2;
+    // Specify list of maps id's to remove
+    repeated string removed = 3;
+    repeated UpdateMapSharing updated_sharing = 4;
+    repeated UpdateMapImage updated_images = 5;
+    // Change order by specifying new position for specific maps
+    repeated UpdateMapsOrder updated_orders = 6;
+}
+
+message ChangeInfo
+{
+    enum EEntity
+    {
+        UNKNOWN = 0;
+        MAP = 1;
+        IMAGE = 2;
+        MARKERS = 3;
+        ORDER = 4;
+    }
+
+    string id = 1;
+    string etag = 2;
+    EEntity entity = 3;
+}
+
+message ChangeMapsResponse
+{
+    repeated ChangeInfo info = 1;
+}
+
+message GetMapImageRequest
+{
+    string map_id = 1;
+}
+
+message GetMapImageResponse
+{
+    MapImage image = 1;
+}
+
+message GetMarkersRequest
+{
+    string map_id = 1;
+
+    // Hide markers outside region. All shown by default.
+    Region entry_region = 2;
+
+    // Collapse markers to groups. No collapse by default.
+    double collapse_distance = 3;
+}
+
+message GetMarkersResponse
+{
+    map<string /* by component name */, Marker> markers = 1;
+    repeated MarkerGroup collapsed_markers = 2;
+}
+
+message UpdateMarkers
+{
+    string map_id = 1;
+    // Pass here newly created or modified markers of the map
+    repeated Marker updated = 2;
+    // Pass a list of component which have markers that must be removed
+    // out of the map
+    repeated string removed = 3;
+}
+
+message UpdateMarkersRequest
+{
+    repeated UpdateMarkers changed = 1;
+}
+
+message UpdateMarkersResponse
+{
+    repeated ChangeInfo info = 1;
+}
+
+message GetMapsByComponentRequest
+{
+    EViewMode view = 1;
+    string component_name = 2;
+}
+
+message GetMapsByComponentResponse
+{
+    repeated MapFull items = 1;
+}
+
+// Service for working with maps within domain.
+service MapService
+{
+    // Enums all maps in domain.
+    rpc ListMaps(ListMapsRequest) returns (ListMapsResponse) {
+        option (google.api.http) = {
+            get: "/v1/maps/list"
+        };
+    }
+
+    // Fast lookup for specified maps.
+    rpc BatchGetMaps(BatchGetMapsRequest) returns (BatchGetMapsResponse) {
+        option (google.api.http) = {
+            get: "/v1/maps:batchGet"
+        };
+    }
+
+    // Modifies maps in domain.
+    rpc ChangeMaps(ChangeMapsRequest) returns (ChangeMapsResponse) {
+        option (google.api.http) = {
+            post: "/v1/maps:change"
+            body: "*"
+        };
+    }
+
+    // Returns image by map id
+    rpc GetMapImage(GetMapImageRequest) returns (GetMapImageResponse) {
+        option (google.api.http) = {
+            get: "/v1/maps/image"
+        };
+    }
+
+    // Returns list of markers on a map
+    rpc GetMarkers(GetMarkersRequest) returns (GetMarkersResponse) {
+        option (google.api.http) = {
+            post: "/v1/maps/markers"
+            body: "*"
+        };
+    }
+
+    // Update list of markers on a map 
+    rpc UpdateMarkers(UpdateMarkersRequest) returns (UpdateMarkersResponse) {
+        option (google.api.http) = {
+            post: "/v1/maps/markers:update"
+            body: "*"
+        };
+    }
+
+    // Returns maps which contain markers associated with the component 
+    rpc GetMapsByComponent (GetMapsByComponentRequest) returns (GetMapsByComponentResponse) {
+        option (google.api.http) = {
+            get: "/v1/maps:getByComponent"
+        };
+    }
+
+    // Configures map providers descriptions on the server.
+    rpc ConfigureMapProviders(ConfigureMapProvidersRequest) returns (ConfigureMapProvidersResponse) {
+        option (google.api.http) = {
+            post: "/v1/maps/providers"
+            body: "*"
+        };
+    }
+
+    // Lists all map providers registered on the server.
+    rpc ListMapProviders(ListMapProvidersRequest) returns (ListMapProvidersResponse) {
+        option (google.api.http) = {
+            get: "/v1/maps/providers"
+        };
+    }
+
+    // Get a map provider by its ID or map type ID.
+    rpc GetMapProvider(GetMapProviderRequest) returns (GetMapProviderResponse) {
+        option (google.api.http) = {
+            get: "/v1/maps/provider"
+        };
+    }
+}
+
+// Request message for ConfigureMapProviders
+message ConfigureMapProvidersRequest
+{
+    // A list of the map providers to be created or modified.
+    repeated MapProvider changed = 1;
+
+    // IDs of the map providers to be removed.
+    repeated string removed = 2;
+}
+
+// Response message for ConfigureMapProviders
+message ConfigureMapProvidersResponse
+{
+    // The updated etags of the changed (created or modified) map providers.
+    map<string /* a unique identifier of a map provider (a GUID) */, string /* new etag */> etags = 1;
+}
+
+// Request message for ListMapProviders
+message ListMapProvidersRequest
+{
+    // The maximum number of items to return.
+    int32 page_size = 100;
+
+    // The pagination token of the next results page. If not set, returns the
+    // first page.
+    //
+    // The token is returned in the response to a previous list request.
+    string page_token = 101;
+}
+
+// Response message for ListMapProviders
+message ListMapProvidersResponse
+{
+    // Map providers lists that are registered on the server.
+    repeated MapProvider map_providers = 1;
+
+    // Pagination token of the next results page. Empty if there are no
+    // more results in the list.
+    string next_page_token = 100;
+}
+
+// Request message for GetMapProvider
+message GetMapProviderRequest
+{
+    // A unique ID of the requested map provider.
+    string id = 1;
+}
+
+// Response message for GetMapProvider
+message GetMapProviderResponse
+{
+    // The requested map provider.
+    MapProvider map_provider = 1;
+}

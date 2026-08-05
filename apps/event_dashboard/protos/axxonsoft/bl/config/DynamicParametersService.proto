@@ -1,0 +1,42 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+import "axxonsoft/bl/config/PropertyDescriptor.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "google/api/annotations.proto";
+
+message AcquireDynamicParametersRequest
+{
+    string uid = 1;
+}
+
+message AcquireDynamicParametersResponse
+{
+    enum EStatus
+    {
+        // Operation has been finished successfully.
+        DONE = 0;
+
+        // Acquiring params for this unit is in progress. Retry acquire procedure later.
+        IN_PROGRESS = 1;
+
+        // Operation failed.
+        FAILED = 2;
+    }
+
+    EStatus status = 1;
+    repeated PropertyDescriptor properties = 2;
+}
+
+service DynamicParametersService
+{
+    rpc AcquireDynamicParameters (AcquireDynamicParametersRequest) returns (AcquireDynamicParametersResponse){
+        option (google.api.http) = {
+        get: "/v1/configurator/dynamic-parameters:acquire"
+      };
+    }
+
+}
+

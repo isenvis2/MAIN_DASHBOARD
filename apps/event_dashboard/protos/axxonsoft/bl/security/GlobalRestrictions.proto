@@ -1,0 +1,13 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+message GlobalRestrictions
+{
+    // If restriction is active then a watermark with username information
+    // will be added to all video streams
+    google.protobuf.BoolValue force_username_watermarking = 1;
+}

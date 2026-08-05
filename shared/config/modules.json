@@ -1,0 +1,14 @@
+{
+  "server_host": "auto",
+  "hls_url": "http://{BACKEND_HOST}:8080/index.html?embed=1",
+  "weather_url": "http://{BACKEND_HOST}:8100/?embed=1",
+  "sms_url": "http://{FRONTEND_HOST}:3000/?embed=1",
+  "news_url": "http://{FRONTEND_HOST}:5173/?embed=1",
+  "ytn_url": "http://{BACKEND_HOST}:8080/ytn.html?camId=video1&embed=1&unifiedHls=1&liveDelay=3&v=7712",
+  "weather_probe_url": "http://{BACKEND_HOST}:8100/",
+  "event_url": "http://{BACKEND_HOST}:3100/?embed=1",
+  "report_url": "http://{BACKEND_HOST}:3200/",
+  "frontend_host": "auto",
+  "backend_host": "auto",
+  "hls_api": "http://{BACKEND_HOST}:8080"
+}

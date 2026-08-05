@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Embed Loader</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#020617;color:#cbd5e1;font-family:Segoe UI,Arial,sans-serif}
+.wrap{position:relative;width:100%;height:100%}
+.frame{position:absolute;inset:0;border:0;width:100%;height:100%;display:none;background:#000}
+.status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:#020617}
+.status .title{font-size:13px;font-weight:700}
+.status .meta{font-size:11px;color:#94a3b8}
+button{padding:6px 10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <iframe id="targetFrame" class="frame" title="Embedded target"></iframe>
+  <div id="status" class="status">
+    <div class="title" id="label">모듈 연결 대기 중...</div>
+    <div class="meta" id="meta">초기화 중</div>
+    <button id="btnRetry" type="button">다시 시도</button>
+  </div>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+function getRemoteHost() {
+  return window.location.hostname || 'localhost';
+}
+function getHttpProtocol() {
+  return window.location.protocol === 'https:' ? 'https:' : 'http:';
+}
+function isLoopbackHost(hostname) {
+  const h = String(hostname || '').trim().toLowerCase();
+  return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || h === '0.0.0.0';
+}
+function normalizeRemoteUrl(raw) {
+  const replaced = String(raw || '')
+    .replaceAll('{HOST}', getRemoteHost())
+    .replaceAll('{host}', getRemoteHost())
+    .replaceAll('__HOST__', getRemoteHost())
+    .replaceAll('__host__', getRemoteHost())
+    .replaceAll('%SERVER_HOST%', getRemoteHost())
+    .replaceAll('%server_host%', getRemoteHost());
+  if (!replaced) return '';
+  try {
+    const url = new URL(replaced, window.location.href);
+    if (isLoopbackHost(url.hostname) || url.hostname !== getRemoteHost()) {
+      url.hostname = getRemoteHost();
+      url.protocol = getHttpProtocol();
+    }
+    return url.toString();
+  } catch {
+    return replaced;
+  }
+}
+const target = normalizeRemoteUrl(params.get("target") || "");
+const probe = normalizeRemoteUrl(params.get("probe") || target || "");
+const label = params.get("label") || "MODULE";
+const intervalMs = Number(params.get("interval") || 3500);
+const frame = document.getElementById("targetFrame");
+const status = document.getElementById("status");
+const meta = document.getElementById("meta");
+document.getElementById("label").textContent = `${label} 연결 대기 중...`;
+function notify(type, extra = {}) {
+  try { parent.postMessage({ type, label, ...extra }, '*'); } catch {}
+}
+let tries = 0;
+let timer = null;
+let loaded = false;
+let frameRequested = false;
+
+async function ping(url) {
+  try {
+    await fetch(url + (url.includes('?') ? '&' : '?') + '_ping=' + Date.now(), { mode: 'no-cors', cache: 'no-store' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function attempt() {
+  if (!target || loaded) return;
+  notify('embed-loader:loading', { tries });
+  tries += 1;
+  meta.textContent = `시도 ${tries}회 · 서버 준비 확인 중`;
+  const ok = await ping(probe);
+  if (!ok) {
+    meta.textContent = `시도 ${tries}회 · 아직 응답 없음`;
+    notify('embed-loader:error', { tries });
+    return;
+  }
+  meta.textContent = `시도 ${tries}회 · 응답 확인, 화면 로딩 중`;
+  frameRequested = true;
+  frame.src = target + (target.includes("?") ? "&" : "?") + "_ts=" + Date.now();
+}
+frame.addEventListener("load", () => {
+  if (!frameRequested) return;
+  loaded = true;
+  status.style.display = "none";
+  frame.style.display = "block";
+  notify('embed-loader:ready', { tries });
+  if (timer) clearInterval(timer);
+});
+document.getElementById("btnRetry").addEventListener("click", () => {
+  loaded = false;
+  frameRequested = false;
+  status.style.display = "flex";
+  frame.style.display = "none";
+  attempt();
+});
+attempt();
+timer = setInterval(() => {
+  if (!loaded) attempt();
+}, intervalMs);
+</script>
+</body>
+</html>

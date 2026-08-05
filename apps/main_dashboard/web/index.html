@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Raon Integrated Control</title>
+  <link rel="stylesheet" href="./css/style.css?v=20260706-v7801-report-modal" />
+</head>
+<body>
+  <div class="dashboard-root">
+    <header class="top-header">
+      <div class="brand">
+        <div class="brand-icon">R</div>
+        <div>
+          <div class="brand-title">라온 AI 통합관제 시스템</div>
+          <div class="brand-subtitle">Main Dashboard Preview</div>
+        </div>
+      </div>
+      <div class="header-tools">
+        <button id="btnOpenReport" class="header-report-btn" type="button" aria-label="보고서 대시보드 모달 열기" title="보고서 대시보드 열기">
+          <span class="header-report-icon" aria-hidden="true">▣</span> 보고서 대시보드
+        </button>
+        <div id="headerStatus" class="status-pill">준비</div>
+        <div id="clock" class="clock">0000-00-00 00:00:00</div>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <aside class="left-panel panel-shell">
+        <section class="left-top panel-card">
+          <div class="panel-title">GIS / 카메라 리스트</div>
+          <div class="left-top-inner">
+            <div class="mode-buttons">
+              <button id="btnShowGis" class="mode-btn active" type="button">GIS</button>
+              <button id="btnShowHls" class="mode-btn" type="button">CAM</button>
+              <button id="btnRefreshList" class="mode-btn" type="button">목록 새로고침</button>
+            </div>
+            <div class="search-row">
+              <input id="cameraSearch" type="text" placeholder="카메라 검색" />
+            </div>
+            <div id="cameraHelperText" class="helper-text">초기 상태는 GIS 지도 화면입니다. CAM 버튼을 누른 뒤 카메라를 선택하면 중앙 패널에 해당 카메라 영상이 표시됩니다.</div>
+            <div id="cameraList" class="camera-list"></div>
+          </div>
+        </section>
+        <section class="left-bottom panel-card">
+          <div class="panel-title panel-title-with-actions">
+            <span class="panel-title-text">날씨 대시보드</span>
+            <span class="panel-title-actions">
+              <button id="btnOpenWeather" class="open-panel-btn panel-tool-btn" type="button" aria-label="날씨 대시보드 새창 열기" title="날씨 대시보드 새창 열기"><span class="open-icon" aria-hidden="true">▣</span></button>
+              <button id="btnSyncWeather" class="sync-float-btn panel-tool-btn" type="button" aria-label="Weather sync" title="Weather sync"><span class="sync-icon">↻</span></button>
+            </span>
+          </div>
+          <iframe id="weatherFrame" title="날씨 대시보드"></iframe>
+        </section>
+      </aside>
+
+      <section class="center-panel panel-shell panel-card">
+        <div class="panel-title panel-title-bar">
+          <span id="centerPanelTitle">GIS</span>
+          <span id="centerPanelSubTitle" class="center-subtitle">초기 상태: GIS 지도 화면</span>
+        </div>
+        <div class="center-frame-wrap center-mode-gis" id="centerFrameWrap">
+          <iframe id="gisFrame" title="GIS"></iframe>
+          <div id="hlsStage" class="hls-stage hidden">
+            <iframe id="hlsFrame" title="HLS Camera View"></iframe>
+            <div id="hlsPlaceholder" class="hls-placeholder">
+              <div class="hls-placeholder-title">CAM 모드</div>
+              <div class="hls-placeholder-text">좌측 카메라 목록에서 재생할 카메라를 선택하세요.</div>
+            </div>
+          </div>
+          <div id="eventImageStage" class="event-image-stage hidden">
+            <div class="event-image-container">
+              <img id="eventCenterImage" alt="선택 이벤트 이미지" />
+              <div id="eventCenterBox" class="event-center-box hidden"></div>
+            </div>
+            <div id="eventCenterCaption" class="event-center-caption">이벤트 이미지를 선택하세요.</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="right-panel panel-shell">
+        <section class="right-top panel-card">
+          <div class="panel-title">YTN 라이브</div>
+          <iframe id="ytnFrame" title="YTN 라이브" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </section>
+        <section class="right-middle panel-card">
+          <div class="panel-title panel-title-with-actions">
+            <span class="panel-title-text">재난안전 긴급문자 대시보드</span>
+            <span class="panel-title-actions">
+              <button id="btnOpenSms" class="open-panel-btn panel-tool-btn" type="button" aria-label="SMS 대시보드 새창 열기" title="SMS 대시보드 새창 열기"><span class="open-icon" aria-hidden="true">▣</span></button>
+              <button id="btnSyncSms" class="sync-float-btn panel-tool-btn" type="button" aria-label="SMS sync" title="SMS sync"><span class="sync-icon">↻</span></button>
+            </span>
+          </div>
+          <iframe id="smsFrame" title="재난안전 긴급문자 대시보드"></iframe>
+        </section>
+        <section class="right-bottom panel-card">
+          <div class="panel-title panel-title-with-actions">
+            <span class="panel-title-text">재난안전 뉴스 대시보드</span>
+            <span class="panel-title-actions">
+              <button id="btnOpenNews" class="open-panel-btn panel-tool-btn" type="button" aria-label="뉴스 대시보드 새창 열기" title="뉴스 대시보드 새창 열기"><span class="open-icon" aria-hidden="true">▣</span></button>
+              <button id="btnSyncNews" class="sync-float-btn panel-tool-btn" type="button" aria-label="News sync" title="News sync"><span class="sync-icon">↻</span></button>
+            </span>
+          </div>
+          <iframe id="newsFrame" title="재난안전 뉴스 대시보드"></iframe>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="bottom-panel event-dashboard-panel panel-card">
+      <button id="btnSyncEvent" class="sync-float-btn event-sync-btn" type="button" aria-label="Event sync" title="Event sync"><span class="sync-icon">↻</span></button>
+      <button id="btnOpenEvent" class="open-float-btn event-open-btn" type="button" aria-label="이벤트 대시보드 새창 열기" title="이벤트 대시보드 새창 열기"><span class="open-icon" aria-hidden="true">▣</span></button>
+      <iframe id="eventFrame" title="이벤트 스냅샷"></iframe>
+    </footer>
+  </div>
+
+  <!-- V78.01: Report Dashboard is embedded in a modal. The close action returns focus to #btnOpenReport. -->
+  <div id="reportModal" class="report-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle" aria-hidden="true">
+    <div class="report-modal-backdrop" data-report-modal-close="true" aria-hidden="true"></div>
+    <section class="report-modal-dialog" role="document" tabindex="-1">
+      <header class="report-modal-header">
+        <div class="report-modal-heading">
+          <span class="report-modal-icon" aria-hidden="true">▣</span>
+          <div>
+            <h2 id="reportModalTitle">보고서 대시보드</h2>
+            <p>현장 순찰·사건 보고서 작성 및 결재</p>
+          </div>
+        </div>
+        <button id="btnCloseReportModal" class="report-modal-close" type="button" aria-label="보고서 대시보드 닫기" title="닫기 (Esc)">×</button>
+      </header>
+      <div class="report-modal-content">
+        <iframe id="reportFrame" title="보고서 대시보드" allow="clipboard-read; clipboard-write"></iframe>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./js/app.js?v=20260706-v7801-report-modal"></script>
+
+  <script>
+    (function initCursorAutoHide(idleMs) {
+      let hideTimer = null;
+      const showCursor = () => {
+        document.body.classList.remove('dashboard-cursor-hidden');
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => document.body.classList.add('dashboard-cursor-hidden'), idleMs);
+      };
+      ['mousemove','mousedown','mouseup','mouseenter','mouseleave','wheel','touchstart','touchmove','pointermove','keydown'].forEach((evt) => {
+        window.addEventListener(evt, showCursor, { passive: true });
+      });
+      showCursor();
+    })(10000);
+  </script>
+
+</body>
+</html>

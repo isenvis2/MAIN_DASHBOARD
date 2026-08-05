@@ -1,0 +1,16 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# 바이너리 파일은 줄바꿈 변환 대상에서 제외
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.mp4 binary
+*.m4s binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

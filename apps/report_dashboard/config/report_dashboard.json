@@ -1,0 +1,15 @@
+{
+  "service": {
+    "host": "0.0.0.0",
+    "port": 3200,
+    "note": "0.0.0.0 binds the service to all server network interfaces so the main dashboard and remote clients can open it."
+  },
+  "storage": {
+    "databaseFile": "../../../shared/data/report_dashboard/db.json",
+    "note": "This path is resolved from this JSON file. Keep operational report data under shared/data when updating the application source."
+  },
+  "http": {
+    "requestBodyLimit": "15mb",
+    "note": "Maximum JSON/form request size. Incident photo data is currently stored in the report JSON database."
+  }
+}

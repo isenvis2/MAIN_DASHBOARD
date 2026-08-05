@@ -1,0 +1,59 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+import "google/api/annotations.proto";
+
+import "axxonsoft/bl/primitive/Color.proto";
+import "axxonsoft/bl/primitive/Font.proto";
+import "axxonsoft/bl/primitive/KeyWords.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+message PropertyGroup
+{
+    repeated Property properties = 1;
+}
+
+message Property
+{
+    // Property identifier.
+    string id = 1;
+
+    // Used in templates to signal, that this property should not be changed,
+    // but used to locate required unit.
+    bool readonly = 2;
+
+    // A property current or default value.
+    oneof value {
+        string value_string = 20;
+        int32 value_int32 = 21;
+        double value_double = 22;
+        bool value_bool = 23;
+        primitive.Rectangle value_rectangle = 24;
+        primitive.Polyline value_polyline = 25;
+        primitive.Mask value_mask = 26;
+        primitive.HsvColorRange value_hsv_color_range = 27;
+        int64 value_int64 = 28;
+        uint64 value_uint64 = 29;
+        primitive.LineSegment         value_line_segment = 30;
+        primitive.VerticalLineSegment value_vertical_line_segment = 31;
+        primitive.LineString           value_line_string = 32;
+        primitive.LineStringWithNormal value_line_string_with_normal = 33;
+        primitive.SimplePolygon           value_simple_polygon = 34;
+        primitive.SimplePolygonWithNormal value_simple_polygon_with_normal = 35;
+        primitive.SectoredRectangle value_sectored_rectangle = 36;
+        primitive.Circles value_circles = 37;
+        primitive.RelatedZones value_related_zones = 38;
+        primitive.Point value_point = 39;
+        primitive.Color value_color = 40;
+        primitive.Font value_font = 41;
+        primitive.KeyWords value_key_words = 42;
+
+        PropertyGroup value_properties = 49;
+
+        primitive.CalibrationInfo value_calibration_info = 51;
+    }
+    // Nested (dependent) properties
+    repeated Property properties = 50;
+}

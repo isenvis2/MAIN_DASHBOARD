@@ -1,0 +1,184 @@
+{
+  "version": "v78.02",
+  "map": {
+    "centerLat": 35.532239,
+    "centerLng": 129.307554,
+    "level": 4
+  },
+  "note": "카카오맵 시작 위치와 확대 레벨, RTSP→HLS 변환 엔진 및 HLS segment 정책 설정 파일입니다.",
+  "hlsTools": {
+    "ffmpegPath": "C:\\ffmpeg\\bin\\ffmpeg.exe",
+    "ffprobePath": "C:\\ffmpeg\\bin\\ffprobe.exe",
+    "ffmpegCandidates": [
+      "C:\\ffmpeg\\bin\\ffmpeg.exe",
+      "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe"
+    ],
+    "ffprobeCandidates": [
+      "C:\\ffmpeg\\bin\\ffprobe.exe",
+      "C:\\Program Files\\ffmpeg\\bin\\ffprobe.exe"
+    ],
+    "allowPathAutoDetectFallback": false,
+    "note": "V78.02: Windows PATH 순서와 관계없이 지정한 FFmpeg/FFprobe를 우선 사용합니다. ffmpegPath/ffprobePath가 비어 있으면 candidates를 순서대로 확인하고, allowPathAutoDetectFallback=true일 때만 PATH 자동 탐색을 허용합니다."
+  },
+  "hlsConversion": {
+    "rtspEngine": "cpu",
+    "rtspPlusEngine": "gpu",
+    "gpuIndex": 0,
+    "fallbackToCpu": true,
+    "note": "V77.12: video1/YTN 라이브 패널에서 정상 재생 중 live edge - 3초 보정이 반복 실행되어 3초 구간을 loop 재생하지 않도록 seek 조건을 완화합니다. 일반 rtsp(cam002/cam003)는 CPU/libx264로 동시에 2개 이상 유지합니다.",
+    "rtspGpuIndex": 0,
+    "rtspPlusGpuIndex": 0
+  },
+  "hlsOutput": {
+    "hlsTime": 0.5,
+    "hlsListSize": 36,
+    "hlsDeleteThreshold": 18,
+    "note": "V77.11 유지: ffmpeg 재시작 후 오래된 segment가 섞이지 않도록 epoch start_number와 stale segment pruning을 사용합니다. V77.12는 player의 반복 seek 문제를 별도로 보정합니다.",
+    "useEpochStartNumber": true,
+    "segmentPruneEnabled": true,
+    "maxSegmentFiles": 120,
+    "keepRecentSegmentFiles": 78
+  },
+  "hlsAudio": {
+    "enabled": true,
+    "rtspPlusAudio": true,
+    "rtspAudio": false,
+    "codec": "aac",
+    "bitrate": "128k",
+    "sampleRate": 44100,
+    "channels": 2,
+    "note": "YTN 같은 rtsp+ 스트림만 오디오를 포함합니다. 일반 rtsp 카메라는 영상만 유지합니다."
+  },
+  "hlsStartup": {
+    "fastStart": true,
+    "minSegmentsToPlay": 1,
+    "maxM3u8AgeSec": 6,
+    "initialWaitMs": 3000,
+    "backgroundWaitMs": 60000,
+    "fastProbeIntervalMs": 500,
+    "retryIntervalMs": 1000,
+    "statusIntervalMs": 1000,
+    "probeAnalyzeDuration": 1000000,
+    "probeSize": 1000000,
+    "note": "새 RTSP 선택 시 빠르게 화면을 표출하기 위한 시작 조건입니다. prewarm은 사용하지 않습니다."
+  },
+  "hlsPrecheck": {
+    "enabled": true,
+    "tcpTimeoutMs": 1200,
+    "ffprobeTimeoutMs": 4500,
+    "cacheTtlMs": 10000,
+    "rtspAnalyzeDuration": 1000000,
+    "rtspProbeSize": 1000000,
+    "rtspPlusAnalyzeDuration": 3000000,
+    "rtspPlusProbeSize": 3000000,
+    "note": "카메라 선택 전 TCP 포트 확인과 ffprobe video stream 확인을 수행합니다. 실패 시 HLS 변환을 시작하지 않습니다."
+  },
+  "hlsWatchdog": {
+    "enabled": true,
+    "startupGraceSec": 30,
+    "softStaleSec": 6,
+    "staleM3u8Sec": 12,
+    "hardStaleSec": 18,
+    "restartDelaySec": 2,
+    "minRestartIntervalSec": 8,
+    "maxRestartsPerHour": 30,
+    "note": "V77.12: segment 정리 정책은 유지하되, YTN 패널 정상 재생 중에는 live edge 근접만으로 되감기 seek를 반복하지 않습니다.",
+    "preserveHlsOnRestart": true
+  },
+  "hlsResourceGuard": {
+    "enabled": true,
+    "maxViewers": 20,
+    "closePolicy": "oldest",
+    "excludeSourceTypes": [
+      "rtsp+"
+    ],
+    "excludeAlwaysOn": true,
+    "beforeOpenCheck": true,
+    "autoCloseOldest": true,
+    "gpu": {
+      "enabled": true,
+      "maxUtilPercent": 85,
+      "maxMemoryPercent": 85
+    },
+    "cpu": {
+      "enabled": true,
+      "maxUtilPercent": 95,
+      "maxMemoryPercent": 95
+    },
+    "note": "V77.07: GPU 제한과 CPU Viewer 제한을 분리합니다. YTN/video1은 GPU 1개로 고정하고, 일반 RTSP CPU Viewer는 최소 2개(cam002+cam003) 이상 동시에 유지되도록 CPU 부하만으로는 2개 미만에서 자동 종료하지 않습니다.",
+    "maxGpuStreams": 1,
+    "maxCpuStreams": 4,
+    "minCpuViewersBeforeEvict": 2
+  },
+  "hlsLogging": {
+    "enabled": true,
+    "mode": "normal",
+    "apiLogFile": "shared/logs/hls_api.log",
+    "maxBytes": 2097152,
+    "backups": 3,
+    "console": true,
+    "normalEvents": [
+      "STARTUP",
+      "REQUEST",
+      "RELEASE",
+      "RELEASE_ALL",
+      "WATCHDOG_RESTART",
+      "ERROR",
+      "WARN"
+    ],
+    "debugEvents": [
+      "HTTP",
+      "PRECHECK",
+      "STATUS",
+      "CAMERA_LIST",
+      "MEDIA",
+      "RESOURCE_GUARD",
+      "KEEPALIVE",
+      "RECONNECT"
+    ]
+  },
+  "hlsRestartBackoff": {
+    "enabled": true,
+    "normalInitialSec": 10,
+    "normalMaxSec": 30,
+    "alwaysOnInitialSec": 3,
+    "alwaysOnMaxSec": 15,
+    "successResetFreshSegmentSec": 6,
+    "maxClientRestartsPerHour": 12,
+    "note": "V77.06: blackout 시간을 줄이기 위해 backoff를 짧게 조정합니다. rtsp+ alwaysOn은 최대 15초, 일반 rtsp는 최대 30초로 제한합니다."
+  },
+  "hlsPlayer": {
+    "stallMonitorEnabled": true,
+    "stallThresholdMs": 8000,
+    "freshSegmentAgeSec": 8,
+    "playerOnlyRecoverCooldownMs": 8000,
+    "note": "V77.09: FFmpeg/HLS segment가 fresh인데 화면만 멈춘 경우 서버 재시작 대신 HLS.js live edge 재동기화와 player-only reload를 우선 수행합니다.",
+    "freezeFrameOnRecover": true,
+    "keepLastFrameOnReconnect": true,
+    "blackoutAvoidance": true,
+    "preferPlayerOnlyHardReload": true,
+    "serverRestartAfterPlayerOnlyAttempts": 3,
+    "liveEdgeSeekOnStall": true,
+    "hlsJsLiveSyncDurationCount": 4,
+    "hlsJsLiveMaxLatencyDurationCount": 10,
+    "hlsJsMaxBufferLength": 15
+  },
+  "startupCleanup": {
+    "enabled": true,
+    "forceKillAllFfmpegOnStartup": true,
+    "cleanupMediaOnStartup": true,
+    "note": "V77.05: 전용 서버 정책. HLS Converter 초기 기동 시 남아 있는 모든 ffmpeg.exe를 강제 종료한 뒤 media 산출물을 정리하고 새로 시작합니다."
+  },
+  "ytnPlayer": {
+    "useUnifiedHlsPlayer": true,
+    "camId": "video1",
+    "liveBufferMarginSec": 3,
+    "edgeGuardSec": 1.2,
+    "stallThresholdMs": 8000,
+    "note": "V77.09: YTN 대시보드와 GIS/HLS viewer 모두 video1 HLS를 사용하고, currentTime이 duration 끝에 너무 붙으면 duration-3초로 되돌려 버퍼를 확보합니다."
+  },
+  "hlsPlayerRecovery": {
+    "ytnLiveBufferMarginSec": 3,
+    "note": "V77.09: FFmpeg/HLS segment가 fresh일 때는 서버 재시작보다 player-only recovery를 우선하고, YTN은 live edge보다 3초 뒤의 buffer margin에서 재생합니다."
+  }
+}

@@ -1,0 +1,1833 @@
+syntax = "proto3";
+
+package axxonsoft.bl.events;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/events";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+enum EEventType
+{
+    EEventType_UNSPECIFIED = 0;
+    ET_DetectorEvent = 1; //JE_Type = 1
+    ET_StateControlStateChangeEvent = 2; //JE_Type = 3
+    ET_CameraChangedEvent = 3;
+    ET_CommonDeviceChangedEvent = 53;
+    ET_IpDeviceStateChangedEvent = 4; //JE_Type = 0 Deprecated, use ObjectActivatedEvent instead
+    ET_DEPRECATED_FEEL_FREE_TO_USE = 5;
+    ET_ArchiveReplicationProgressEvent = 6;
+    ET_LayoutsChangedEvent = 7;
+    ET_MapsChangedEvent = 8;
+
+    // Changes of map providers registered on the server.
+    ET_MapProviderChangedEvent = 43;
+
+    ET_MacroEvent = 9; //JE_Type = 2
+    ET_StorageVolumeHealth = 10; //JE_Type = 9
+    ET_StorageRecordState = 11; //JE_Type = 15
+    ET_NotificationExternal = 12; //JE_Type = 4
+    ET_PTZEvent = 13; // JE_Type = 5
+    ET_Bookmark = 14; // JE_Type = 8
+    ET_Alert = 15; // JE_Type = 6. Contains 1, 7, 9
+    ET_AlertState = 16; // JE_Type = 7. Contains 14
+    ET_CloudBindingChanged = 17;
+    ET_HostStatusChangedEvent = 18;
+    ET_InternalHostStatus = 50;
+    ET_GroupMembershipChangedEvent = 19;
+    ET_ExternalMacroEvent = 20;
+    ET_CameraArmStateEvent = 21; // JE_Type = 19
+    ET_ObjectActivatedEvent = 22;
+    ET_ControlPanelStateEvent = 23; // JE_Type = 12 (JE_Internal, type: EJEI_JoystickState)
+    ET_SItemStatus = 24;
+    ET_LoosingVmdaData = 25; // JE_Type = 13
+    ET_ACFAEvent = 26;
+    ET_ServiceLifeEvent = 27;
+    ET_TextEvent = 28; // JE_Type = 11
+    ET_HidEvent = 29; // JE_Type = 14
+    ET_IntegrityEvent = 30; // JE_Type = 10
+    ET_ReplicationStateEvent = 31; // JE_Type = 12 (JE_Internal, type: EJEI_ReplicationState)
+    ET_ReplicationProgressEvent = 32; // JE_Type = 12 (JE_Internal, type: EJEI_ReplicationProgress)
+    ET_Audit = 33;
+    ET_SensorSignalLevelChanged = 34;
+    ET_TimeSyncEvent = 35;
+    ET_CounterEvent = 36;
+    ET_VideowallStatusEvent = 37;
+    ET_VideowallControlDataEvent = 38;
+    ET_VideowallChangeEvent = 39;
+    ET_GlobalTrackProfileChangedEvent = 40;
+    
+    // Self-diagnosis action event.
+    ET_DiagnosticActionEvent = 42;
+
+    // Changes of the configuration packet.
+    ET_ConfigChangedEvent = 44;
+
+    // Changes of a set of links to the configuration packet.
+    ET_ConfigLinkageChangedEvent = 45;
+
+    // System error event, one of the following:
+    //  - DiagnosticAlertEvent
+    ET_SystemError = 46;
+
+    ET_AcfaComponentChangedEvent = 47;
+    
+    ET_LicenseServiceEvent = 48; // Notification about changed information or changed status inside of license service. 
+    ET_ComponentChangedEvent = 49;
+    ET_RRListChangedEvent = 51;
+    ET_ArchiveChangedEvent = 52; // Changes of archive storage to notify UI
+
+    ET_UserLockedEvent = 54;
+
+    // Changes of the data storage settings.
+    //
+    // Message type: settings.DataStorageSettingsChanged.
+    ET_DataStorageSettingsChanged = 60;
+    // Message type: settings.ExportSettingsChanged.
+    ET_ExportSettingsChanged = 61;
+}
+
+enum EDetectorsGroup
+{
+    DG_UNSPECIFIED = 0;
+    DG_MOTION_DETECTOR = 1;
+    DG_TRACKER = 2;
+    DG_FACE_DETECTOR = 3;
+    DG_SITUATION_DETECTOR = 4;
+    DG_LPR_DETECTOR = 5;
+    DG_AUDIO_DETECTOR = 6;
+    DG_FIRE_DETECTOR = 7;
+    DG_VIDEO_QUALITY_DETECTOR = 8;
+    DG_COUNTER = 9;
+    DG_SCENE_CHANGE_DETECTOR = 10;
+    DG_TEMPERATURE_DETECTOR = 11;
+    DG_GEO_POSITION = 12;
+    DG_MASK = 13;
+    DG_AI_DETECTOR = 14;
+    DG_SEGMENTATION = 15;
+    DG_FEATURE_EXTRACTOR = 16;
+    DG_POSE_ESTIMATION = 17;
+    DG_FACE_EVASION_DETECTOR = 18;
+    DG_PRIVACY_DETECTOR = 19;
+    DG_VEHICLE_DETECTOR = 20;
+
+    DG_NO_DETECTOR = 1000;
+}
+
+enum EAlertPriority
+{
+    ALERT_PRIORITY_UNSPECIFIED = 0;
+    AP_MINIMUM = 1;
+    AP_LOW = 2;
+    AP_MEDIUM = 3;
+    AP_HIGH = 4;
+    AP_MAXIMUM = 5;
+}
+
+message ComponentRef
+{
+    string access_point = 1;
+    string friendly_name = 2;
+    string group = 3;
+}
+
+message NodeRef
+{
+    string name = 1;
+    string friendly_name = 2;
+}
+
+message MacroRef
+{
+    string guid = 1;
+    string friendly_name = 2;
+}
+
+message CounterRef
+{
+    string guid = 1;
+    string friendly_name = 2;
+}
+
+message TriggerRef
+{
+    string event = 1;
+    ComponentRef source = 2;
+    ComponentRef camera = 3;
+}
+
+message AuditEvent
+{
+    enum EAuditEventType
+    {
+        AE_NOT_SPECIFIED = 0;
+        
+        reserved 1 to 6;
+        
+        AE_USER_ADD = 7;
+        AE_USER_REMOVE = 8;
+        AE_USER_SETUP = 9;
+        AE_ROLE_ADD = 10;
+        AE_ROLE_REMOVE = 11;
+        AE_ROLE_SETUP = 12;
+        AE_USER_LOGIN = 13;
+        AE_USER_LOGOUT = 14;
+        AE_DEVICE_ADD = 15;
+        AE_DEVICE_REMOVE = 16;
+        AE_DEVICE_SETUP = 17;
+        AE_DETECTOR_ADD = 18;
+        AE_DETECTOR_REMOVE = 19;
+        AE_DETECTOR_SETUP = 20;
+        AE_ARCHIVE_ADD = 21;
+        AE_ARCHIVE_REMOVE = 22;
+        AE_ARCHIVE_SETUP = 23;
+        AE_RULE_ADD = 24;
+        AE_RULE_REMOVE = 25;
+        AE_RULE_SETUP = 26;
+        AE_ALERT_MODE_SETUP = 27;
+        AE_ZONE_ARMED = 28;
+        AE_ZONE_DISARMED = 29;
+        AE_MMEXPORT = 30;
+        AE_NOTIFIER_ADD = 31;
+        AE_NOTIFIER_REMOVE = 32;
+        AE_NOTIFIER_SETUP = 33;
+        AE_GENERAL_SETUP = 34;
+        AE_ARCHIVE_BINDING_SETUP = 35;
+        AE_MMEXPORTAGENT_ADD = 36;
+        AE_MMEXPORTAGENT_REMOVE = 37;
+        AE_MMEXPORTAGENT_SETUP = 38;
+        AE_MACRO_ADD = 39;
+        AE_MACRO_REMOVE = 40;
+        AE_MACRO_SETUP = 41;
+        AE_ALERT_TAKING = 42;
+        AE_ALERT_DANGEROUS = 43;
+        AE_ALERT_SUSPICIOUS = 44;
+        AE_ALERT_FALSE = 45;
+
+        reserved 46;
+
+        AE_NODE_INCLUDED = 47;
+        AE_NODE_EXCLUDED = 48;
+        AE_ARCHIVE_VIEWING = 49;
+        AE_CAMERA_VIEWING = 50;
+        AE_LAYOUT_VIEWING = 51;
+        
+        reserved 52 to 54;
+
+        AE_JOURNAL_EXPORT = 55;
+        AE_LDAP_ADD = 56;
+        AE_LDAP_REMOVE = 57;
+        AE_LDAP_SETUP = 58;
+        AE_LAYOUT_ADD = 59;
+        AE_LAYOUT_REMOVE = 60;
+        AE_LAYOUT_SETUP = 61;
+        AE_USER_LOGIN_FAILED = 62;
+        AE_PTZ_CONTROL = 63;
+        AE_ARCHIVE_COMMENT_ADD = 64;
+        AE_ARCHIVE_COMMENT_EDIT = 65;
+        
+        reserved 66 to 73;
+        
+        AE_COUNTER_ADD = 74;
+        AE_COUNTER_REMOVE = 75;
+        AE_COUNTER_SETUP = 76;
+        AE_ALERT_POSTPONE = 77;
+
+        AE_REVISION_RESET = 78;
+        AE_BACKUP_APPLIED = 79;
+        AE_ARCHIVE_REPLICATION_SETUP = 80;
+        AE_TEMPLATE_BINDING = 81;
+        AE_TEMPLATE_UNBINDING = 82;
+        AE_INCLUDE_CAMERA_IN_GROUP = 83;
+        AE_EXCLUDE_CAMERA_FROM_GROUP = 84;
+        AE_ARCHIVE_INTERVAL_REMOVE = 85;
+
+        AE_USER_ROLE_ASSIGNMENT_ADDED = 92;
+        AE_USER_ROLE_ASSIGNMENT_REMOVED = 93;
+        AE_DEVICE_RESET = 94;
+    }
+    
+    message UserInfo
+    {
+        string name = 1;
+        string friendly_name = 2;
+
+        string role_name = 3; // freindly_name of current role
+    }
+
+    message Parameter
+    {
+        string group = 1;
+        string name = 2;
+        string value = 3;
+    }
+
+    string guid = 1;
+    string timestamp = 2;
+
+    EAuditEventType operation = 3;
+
+    NodeRef node_info = 4;
+    UserInfo user = 5;
+    string ip_address = 6;
+
+    repeated ComponentRef components = 11; // camera, detector, telemetry and so on
+    MacroRef macro = 12; // if the event affects macro
+
+    reserved 21;
+
+    repeated Parameter params = 22;
+}
+
+message UserLockedEvent
+{
+    string guid = 1;
+    string timestamp = 2;
+    NodeRef node_info = 3;
+    string username = 4;
+    string attempts_number = 5;
+}
+
+message LicenseServiceEvent
+{
+    enum EStatus
+    {
+        LS_OK = 0;
+        LS_NoKey = 1;
+        LS_InvalidKey = 2;
+        LS_MismatchingKey = 3;
+        LS_Expired = 4;
+        LS_DemoActive = 5;
+        LS_DemoInactive = 6;
+        LS_DemoExpired = 7;
+        LS_Unavailable = 8;  
+    }
+
+    message Status
+    {
+        EStatus status = 1;
+    }
+
+    message RestrictionsUpdated
+    {
+    }
+    
+    message ExpiresSoon
+    {
+    }
+
+    message RemoteHostInfo
+    {
+        string address = 1;
+    }
+    
+    oneof reporter
+    {
+        NodeRef local_host = 1;
+        RemoteHostInfo remote_host = 2;
+    }
+
+    oneof value
+    {
+        Status status = 10;
+        RestrictionsUpdated restrictions_updated = 11; 
+        ExpiresSoon expires_soon = 12;
+    }
+}
+
+message DetectorEvent //JE_Type = 0
+{
+    string guid = 1;
+    string timestamp = 2;
+
+    enum AlertState
+    {
+        // Not specified.
+        HAPPENED = 0;
+        BEGAN = 1;
+        ENDED = 2;
+        SPECIFIED = 3; // to specify HAPPEND event
+    }
+
+    // State of event, if applicable.
+    AlertState state = 3;
+    
+    // multi-media origin of detector
+    string origin_deprecated = 4;// Deprecated, use origin_ext.
+    ComponentRef origin_ext = 10;
+    string offline_analytics_source = 16;
+    
+    // Access point of detector which generates this event.
+    string detector_deprecated = 5;// Deprecated, use detector_ext. 
+    ComponentRef detector_ext = 11;
+    NodeRef node_info = 12;
+    
+    // Event category type, like motion, face and so on 
+    // TODO: discuss this field with E. Mironov
+    string event_type = 6;
+
+    string multi_phase_id = 8;
+
+    repeated EDetectorsGroup detectors_group = 9;
+
+    // License plate
+    message AutoRecognitionHypotheses
+    {
+        int32 ocr_quality = 1;
+        string plate_full = 2;
+        primitive.Rectangle plate_rectangle = 3;
+        string time_best = 4;
+        string country = 5;
+        string plate_state = 6;
+    }
+
+    // Temperature detector
+    message TemperatureInfo
+    {
+        primitive.Temperature max = 1;
+        primitive.Temperature min = 2;
+        primitive.Temperature avg = 3;
+    }
+
+    // Tampering detector
+    message TamperInfo
+    {
+        enum ETamperType
+        {
+            SceneChange = 0;
+            QualityDegradation = 1;
+            QualityDegradationV2 = 2;
+            BlurredDegradation = 3;
+            CompressedDegradation = 4;
+        }
+        repeated ETamperType tamper_types = 1;
+    }
+
+    // License plate
+    message AutoRecognitionResult
+    {
+        enum EVehicleClass
+        {
+            VehicleClassUnknown = 0;
+            Car = 1;
+            Truck = 2;
+            Bus = 3;
+            Motorcycle = 4;
+            LightCommercialVehicle = 5;
+        }
+
+        enum EHeadlightsStatus
+        {
+            Undefined = 0;
+            Enabled = 1;
+            Disabled = 2;
+        }
+
+        enum EDirection
+        {
+            Unknown = 0;
+            Incoming = 1;
+            Outgoing = 2;
+        }
+
+        enum EPlateType
+        {
+            EAgricultural = 0;
+            EAmbulance = 1;
+            EATV = 2;
+            EBicycle = 3;
+            EBusPublicTransport = 4;
+            ECivilDefenseForces = 5;
+            EClassicalHistorical = 6;
+            EClassicalMotorcycle = 7;
+            ECommercial = 8;
+            EConsular = 9;
+            EDealer = 10;
+            EDiplomatic = 11;
+            EDiplomaticHeadsCar = 13;
+            EDiplomaticMotorcycle = 14;
+            EElectricCar = 15;
+            EExporting = 16;
+            EFireServices = 17;
+            EForeigner = 18;
+            EFuneral = 19;
+            EGovernmental = 20;
+            EHandicapped = 21;
+            EImported = 22;
+            EInternationalOrganisation = 23;
+            EJusticePolice = 24;
+            ELeased = 25;
+            ELegalEntity = 26;
+            ELocalAuthority = 27;
+            EMilitary = 28;
+            EMilitaryMotorcycle = 29;
+            EMilitaryTrailerSemitrailer = 30;
+            EMilitaryWorkVehicle = 31;
+            EMoped = 32;
+            EPolice = 33;
+            EPoliceMotorcycle = 34;
+            EPoliceTrailerSemitrailer = 35;
+            EPrivateMotorcycle = 36;
+            EPrivateVehicle = 37;
+            ERailwayServices = 38;
+            ERedCross = 39;
+            ERentalVehicle = 40;
+            ERoyal = 41;
+            EScooter = 42;
+            ESlowVehicle = 43;
+            ESmallVehicle = 44;
+            ESnowmobileAllTerrainVehicle = 45;
+            ESportsCarTruck = 46;
+            ESportsMotocycle = 47;
+            ETaxFree = 48;
+            ETaxi = 49;
+            ETechnological = 50;
+            ETemporary = 51;
+            ETemporaryMilitary = 52;
+            ETemporaryMotorcycle = 53;
+            ETemporaryWorkVehicle = 54;
+            ETestDrive = 55;
+            ETrailerSemitrailer = 56;
+            ETransportingGoods = 57;
+            ETrucks = 58;
+            EUnitedNations = 59;
+            EUnknownPlateType = 60;
+            EVan = 61;
+            EWorkVehicle = 62;
+        }
+
+        EDirection direction = 1;
+        string time_begin = 2;
+        string time_end = 3;
+        repeated AutoRecognitionHypotheses hypotheses = 8;
+        EVehicleClass vehicle_class = 9;
+        string vehicle_color = 10;
+        string vehicle_brand = 11;
+        string vehicle_model = 12;
+        EHeadlightsStatus headlights_status = 13;
+        double vehicle_speed = 14 [deprecated = true]; // its was unitless and replaced by vehicle_speed_kmph
+        double vehicle_speed_kmph = 15;
+        EPlateType plate_type = 16;
+    }
+
+    message AutoRecognitionResultEx
+    {
+        enum EVehiclePurpose
+        {
+            Unknown = 0;
+            FireTrucks = 1;
+            Police = 2;
+            Ambulance = 3;
+        }
+
+        message VehicleClass
+        {
+            AutoRecognitionResult.EVehicleClass value = 1;
+        }
+        message HeadlightsStatus
+        {
+            AutoRecognitionResult.EHeadlightsStatus value = 1;
+        }
+        message Direction
+        {
+            AutoRecognitionResult.EDirection value = 1;
+        }
+        message VehicleColor
+        {
+            string value = 1;
+        }
+        message VehicleBrand
+        {
+            string value = 1;
+        }
+        message VehicleModel
+        {
+            string value = 1;
+        }
+        message VehicleSpeed
+        {
+            double value = 1;
+        }
+        message PlateType
+        {
+            AutoRecognitionResult.EPlateType value = 1;
+        }
+        message VehiclePurpose
+        {
+            EVehiclePurpose value = 1;
+        }
+
+        google.protobuf.Timestamp time_begin = 1;
+        google.protobuf.Timestamp time_end = 2;
+        repeated AutoRecognitionHypotheses hypotheses = 3;
+
+        //Optional values, some of LPR detectors unable to provide full list.
+        Direction direction = 4;
+        VehicleClass vehicle_class = 5;
+        VehicleColor vehicle_color = 6;
+        VehicleBrand vehicle_brand = 7;
+        VehicleModel vehicle_model = 8;
+        HeadlightsStatus headlights_status = 9;
+        VehicleSpeed vehicle_speed = 10;
+        PlateType plate_type = 11;
+        VehiclePurpose vehicle_purpose = 12;
+    }
+
+    message FaceRecognitionResult
+    {
+        enum EGender
+        {
+            UNKNOWN = 0;
+            FEMALE = 1;
+            MALE = 2;
+        }
+
+        enum EEvasionType
+        {
+            UNCLASSIFIED = 0;
+            NO_MASK = 1;
+            LOWER_MASK = 2;
+            FULL_MASK = 3;
+            OTHER_MASK = 4;
+        }
+
+        reserved 1;
+        uint64 begin_time = 2; // TODO: replace with DateTime type
+        double best_quality = 3;
+        int32 age = 4; // 0 if functionality turned off
+        EGender gender = 5;
+        primitive.Temperature temperature = 6;
+        EEvasionType evasion_type = 7;
+    }
+
+    message ListedItemExtraData
+    {
+        string external_system_type_name = 1;
+        map<string, string> additional_info = 10;
+    }
+
+    message ListedFaceDetectedInfo
+    {
+        double score = 1;
+        string listed_face_image_id = 2;
+        ListedItemExtraData extra_data = 10;
+    }
+
+    message ListedPlateDetectedInfo
+    {
+        string plate = 1;
+        reserved 2;
+        ListedItemExtraData extra_data = 10;
+    }
+
+    message ListedObjectDetectedInfo
+    {
+        enum EObjType
+        {
+            EOT_Food = 0;
+        }
+
+        EObjType type = 1;
+        double score = 2;
+        string listed_object_image_id = 3;
+    }
+
+    message ListedItemDetectedInfo
+    {
+        string list_id = 1; // Deprecated, use lists_info
+        string list_name = 8; // Deprecated, use lists_info
+       
+        message ListInfo
+        {
+            string list_id = 1;
+            string list_name = 2;
+        }
+        enum EGender
+        {
+            UNKNOWN = 0;
+            FEMALE = 1;
+            MALE = 2;
+        }
+        
+        repeated ListInfo lists_info = 10;
+        
+        string listed_item_id = 2;
+        string matched_event_id = 3;
+        string matched_event_time = 4;
+
+        reserved 5 to 7;
+
+        string name = 9;
+        int32 age = 11;
+        EGender gender = 12;
+
+        oneof value
+        {
+            ListedFaceDetectedInfo listed_face_info = 21;
+            ListedPlateDetectedInfo listed_plate_info = 22;
+            ListedObjectDetectedInfo listed_object_info = 23;
+        }
+    }
+
+    message QueueDetectedInfo
+    {
+        int32 queue_min = 1;
+        int32 queue_max = 2;
+    }
+    
+    message MoveInZoneInfo
+    {
+        enum EObjectClass
+        {
+            FACE = 0;
+            HUMAN = 1;
+            GROUP = 2;
+            VEHICLE = 3;
+        }
+        
+        EObjectClass object_class = 1;
+    }
+
+    message ByteVector
+    {
+        bytes data = 1;
+        int32 type = 2;
+        string subtype = 3;
+        int32 version = 4;
+        bytes image_data = 5;
+        string guid = 6;
+    }
+
+    message LotsObjectsInfo
+    {
+        uint32 object_count = 1;
+    }
+
+    message VLPpeDetectorInfo
+    {
+        string ppe_type = 1;
+    }
+
+    message GlobalTrackProfile
+    {
+        string global_track_id = 1;
+        string profile_id = 2;
+        string profile_origin = 3;
+    }
+
+    message BarcodeHypotheses
+    {
+        int32 id = 1;
+        string text = 2;
+        primitive.Rectangle rectangle = 3;
+        string barcode_type = 4;
+    }
+
+    message BarcodeDecodedRresult
+    {
+        string decoding_time = 1;
+        repeated BarcodeHypotheses hypotheses = 2;
+    }
+
+    message Details
+    {
+        oneof value 
+        {
+            primitive.Rectangle rectangle = 8;
+            AutoRecognitionResult auto_recognition_result = 10 [deprecated = true];
+            FaceRecognitionResult face_recognition_result = 11;
+            ListedItemDetectedInfo listed_item_detected_result = 12;
+            QueueDetectedInfo queue_detected_result = 13;
+            MoveInZoneInfo move_in_zone = 14;
+            ByteVector byte_vector = 15;
+            primitive.GeoPosition geo_position = 16;
+            LotsObjectsInfo lots_objects = 17;
+            TemperatureInfo temperature = 18;
+            TamperInfo tampering = 19;
+            VLPpeDetectorInfo ppe_detector = 20;
+            AutoRecognitionResultEx auto_recognition_result_ex = 21;
+            GlobalTrackProfile global_track_profile = 22;
+            BarcodeDecodedRresult barcode_decoded = 23;
+        }
+
+        reserved 9;
+    }
+    
+    repeated Details details = 7;
+    reserved 15; reserved "params";
+    
+    // Original data from a detector in json
+    google.protobuf.Struct data = 20;
+}
+
+message StorageVolumeHealth
+{
+    string guid = 1;
+    string timestamp = 2;
+
+    ComponentRef archive = 3;
+    NodeRef node_info = 4;
+
+    string volume_id = 5;
+
+    enum ESWHealthState
+    {
+        CORRUPTED = 0;
+        RESTORED = 1;
+        MAINTENANCE = 2;
+    }
+
+    ESWHealthState state = 6;
+}
+
+message NotificationExternal
+{
+    string guid = 1;
+    string timestamp = 2;
+
+    ComponentRef notifier = 3;
+    NodeRef node_info = 4;
+
+    enum ENEType
+    {
+        SMS = 0;
+        EMAIL = 1;
+    }
+
+    ENEType type = 5;
+    string subject = 6;
+    string message = 7;
+    repeated string recipients = 8;
+    repeated string attachments = 9;
+}
+
+message StorageRecordState
+{
+    string guid = 1;
+    string timestamp = 2;
+
+    ComponentRef archive = 3;
+    NodeRef node_info = 4;
+
+    enum ESRSwitch
+    {
+        ON = 0; // record is on
+        OFF = 1; // record is off
+    }
+
+    ESRSwitch state = 5;
+}
+
+message StateControlStateChangeEvent
+{
+    string guid = 1;
+    string timestamp = 2;
+
+    ComponentRef object_id = 3;
+    ComponentRef parent_source = 4;
+    NodeRef node_info = 5;
+    
+    enum SCSwitch
+    {        
+        // Object is turned on. Or client want to turn on object.
+        ON = 0;
+        
+        // Object is turned off. Or client want to turn off object.
+        OFF = 1;
+    }
+    SCSwitch new_state = 6;
+
+    enum EMediaImplementor
+    {
+        Storage = 0;
+        VoiceNotifier = 1;
+        Relay = 2;
+    }
+    EMediaImplementor media = 7;
+}
+
+message CommonDeviceChangedEvent
+{
+    string id = 1;
+    
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        ADDED = 1;
+        REMOVED = 2;
+        CHANGED = 3;
+    }
+    ChangeAction action = 2;
+}
+
+message CameraChangedEvent
+{
+    string id = 1;
+    
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        ADDED = 1;
+        REMOVED = 2;
+        CHANGED = 3;
+    }
+    ChangeAction action = 3;
+
+    reserved 2;
+    reserved "version";
+}
+
+message AcfaComponentChangedEvent
+{
+    string id = 1;
+    
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        ADDED = 1;
+        REMOVED = 2;
+        CHANGED = 3;
+    }
+    ChangeAction action = 2;
+}
+
+message ComponentChangedEvent
+{
+    string id = 1;
+    
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        ADDED = 1;
+        REMOVED = 2;
+        CHANGED = 3;
+    }
+    ChangeAction action = 2;
+}
+
+message ArchiveChangedEvent
+{
+    string id = 1;
+
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        ADDED = 1;
+        REMOVED = 2;
+        CHANGED = 3;
+    }
+    ChangeAction action = 2;
+}
+
+message IpDeviceStateChangedEvent //Deprecated, use ObjectActivatedEvent
+{
+    enum ExtraFlag
+    {
+        EF_NONE = 0;
+        EF_ON_START = 1;
+        EF_ON_STOP = 2;
+    }
+    enum State
+    {
+        IPDS_CONNECTED = 0;
+        IPDS_IPINT_INTERNAL_FAILURE = 1;
+        IPDS_DISCONNECTED = 2;
+        IPDS_SIGNAL_RESTORED = 3;
+        IPDS_SIGNAL_LOST = 4;
+        IPDS_AUTHORIZATION_FAILED = 5;
+        IPDS_ACCEPT_SETTINGS_FAILURE = 6;
+        IPDS_REBOOTED = 7;
+        IPDS_NETWORK_FAILURE = 8;
+        IPDS_CONNECTION_ERROR = 9;
+        IPDS_SERIAL_NUMBER_VALIDATION_FAILED = 10;
+        IPDS_DEVICE_CONFIGURATION_CHANGED = 11;
+        IPDS_ALL_CONSUMERS_DISCONNECTED = 12;
+        IPDS_NOT_ENOUGH_BANDWIDTH = 13;
+    }
+
+    string object_id_deprecated = 1; //Deprecated, use object_id_ext. 
+    string timestamp = 2;
+    State state = 3;
+    string guid = 4;
+    ComponentRef object_id_ext = 5;
+    NodeRef node_info = 6;
+    string prev_timestamp = 7;
+    ExtraFlag extra = 8;
+}
+
+message MacroEvent
+{
+    enum EMacroInitiatorType
+    {
+        MIT_DETECTOR_EVENT = 0;
+        MIT_TIMEZONE_EVENT = 1;
+        MIT_ALERT = 2;
+        MIT_IP_DEVICE_STATE_EVENT = 3;
+        MIT_WRITE_ARCHIVE_EVENT = 4;
+        MIT_RELAY_EVENT = 5;
+        MIT_PTZ_EVENT = 6;
+        MIT_AUDIT_EVENT = 7;
+        MIT_VOLUME_HEALTH_EVENT = 8;
+        MIT_MANUAL = 9;
+        MIT_TIMEOUT = 10;
+        MIT_AUTO = 11;
+        MIT_KEEP_ALIVE_ITERRUPT = 12;
+        MIT_TEXT_EVENT = 13;
+        MIT_HOST_STATUS = 14;
+        MIT_ARM_STATE_EVENT = 15;
+        MIT_FACE_DETECTED_EVENT = 16;
+        MIT_PLATE_DETECTED_EVENT = 17;
+        MIT_STATISTICS_EVENT = 18;
+        MIT_DETECTOR_INSTABILITY = 19;
+        MIT_KEEPALIVE = 20;
+        MIT_MACRO = 21;
+
+        MIT_UNKNOWN = 100;
+    }
+
+    enum ERuleActionType
+    {
+        RAT_WRITE_ARCHIVE = 0;
+        RAT_RAISE_ALERT = 1;
+        RAT_SWITCH_RELAY = 2;
+        RAT_GOTO_PRESET = 3;
+        RAT_VOICE_NOTIFICATION = 4;
+        RAT_EMAIL_NOTIFICATION = 5;
+        RAT_SMS_NOTIFICATION = 6;
+        RAT_GUI = 7;
+        RAT_ARM_STATE = 8;
+        RAT_MM_EXPORT = 9;
+        RAT_SINK_AUDIO_NOTIFICATION = 10;
+        RAT_GROUP_ACTION = 11;
+        RAT_SPECIAL_ACTION = 12;
+        RAT_REPLICATION = 13;
+        RAT_SERVICE_STATE = 14;
+        RAT_CONFIGURE_ACTION = 15;
+        RAT_INVOKE_MACRO_ACTION = 16;
+        RAT_WEB_QUERY_ACTION = 17;
+    }
+
+    enum EActionExecutionPhase
+    {
+        AEP_STARTED = 0;
+        AEP_COMPLETED = 1;
+        AEP_INTERRUPTED = 2;
+        AEP_FAILED = 3;
+    }
+
+    string guid = 1;
+    string timestamp = 2;
+
+    NodeRef node_info = 3;
+    
+    ComponentRef camera = 11;
+    MacroRef macro = 12;
+    
+    EMacroInitiatorType initiator_type = 21;
+    ERuleActionType action_type = 22;
+    EActionExecutionPhase phase = 23;
+
+    oneof value
+    {
+        string event_id = 17;
+        string initiator_name = 32;
+    }
+}
+
+message ExternalMacroEvent
+{
+    string guid = 1;
+    string rules_action_id = 2;
+    string data = 3;
+    string timestamp = 4;
+}
+
+message CameraArmStateEvent
+{
+    enum ECameraArmState
+    {
+        CS_Disarm = 0;
+        CS_Arm = 1;
+        CS_ArmPrivate = 2;
+    }
+    string guid = 1;
+    string timestamp = 2;
+    ECameraArmState state = 3;
+    string initiator = 4;
+    NodeRef node_info = 5;    
+    ComponentRef camera = 6;
+}
+
+message CounterEvent
+{
+    enum EReason
+    {
+        ER_Start = 0;
+        ER_Stop = 1;
+        ER_Cleanup = 2;
+        ER_Restore = 3;
+        ER_Increase = 4;
+        ER_Decrease = 5;
+        ER_Shutdown = 6;
+    }
+    string guid = 1;
+    string timestamp = 2;
+    CounterRef counter = 3;
+    NodeRef node = 4;
+    EReason reason = 5;
+    uint64 increase = 6;
+    uint64 decrease = 7;
+    bool active = 8;
+    TriggerRef trigger = 9;
+}
+
+message VideowallStatusEvent
+{
+    string wall_id = 1;
+    bool connected = 2;
+    string timestamp = 3;
+}
+
+message VideowallControlDataEvent
+{
+    string wall_id = 1;
+    int64 seq_number = 2;
+}
+
+message VideowallChangeEvent
+{
+    string wall_id = 1;
+    int64 seq_number = 2;
+}
+
+message PTZEvent
+{
+    enum Reason
+    {
+        PER_ENTERED_PRESET = 0;
+        PER_MANUAL_CONTROL = 1;
+        PER_CANNOT_ENTER_PRESET = 2;
+    };
+
+    string guid = 1;
+    string timestamp = 2;
+
+    NodeRef node_info = 3;
+
+    ComponentRef camera = 11;
+    ComponentRef telemetry = 12;
+
+    Reason reason = 21;
+    int32 preset = 22;
+}
+
+message Bookmark
+{
+    enum EAccess
+    {
+        PUBLIC = 0;
+        CONFIDENTIAL = 1;
+    }
+    
+    string guid = 1;
+    string timestamp = 2;
+
+    NodeRef node_info = 3;
+    bool is_protected = 4;
+    EAccess access_level = 5;
+
+    ComponentRef camera = 11;
+    ComponentRef archive = 12;
+
+    string alert_id = 17;
+
+    string group_id = 21; // guid of group of comments
+    primitive.Rectangle boundary = 22;
+    string user = 23; // login of user
+    primitive.TimeRange range = 24;
+    primitive.Geometry geometry = 25; 
+    string message = 26;
+
+    string boundary_deprecated = 81; // will be removed after major gui will be released
+    string geometry_deprecated = 82; // will be removed after major gui will be released
+}
+
+// first state available ONLY as field of Alert message
+// next states available as separate events ONLY in realtime
+// feel free to ask Evgeny Mironov about logic
+message AlertState
+{
+    enum EState
+    {
+        ST_NONE = 0;
+        ST_WANT_REACTION = 1;
+        ST_WANT_PROCESSING = 2;
+        ST_CLOSED = 3;
+    }
+
+    enum ESeverity
+    {
+        SV_UNCLASSIFIED = 0;
+        SV_FALSE = 1;
+        SV_NOTICE = 2;
+        SV_WARNING = 3;
+        SV_ALARM = 4;
+    }
+
+    enum EReviewerType
+    {
+        RT_SYSTEM = 0;
+        RT_USER = 1;
+    }
+
+    string guid = 1;
+    string timestamp = 2;
+    NodeRef node_info = 3;
+
+    ComponentRef camera = 11;
+
+    string alert_id = 17; // AlertEventId
+    string offset = 18;
+
+    EState state = 21;
+    ESeverity severity = 22;
+    EReviewerType reviewer_type = 23;
+    string reviewer = 24;
+    EAlertPriority priority = 25;
+    repeated string user_roles = 26;
+    string escalate_comment = 27;
+
+    Bookmark bookmark = 31;
+}
+
+message MandatoryComment
+{
+    bool confirmed_alarm = 1;
+    bool suspicious_situation = 2;
+    bool false_alarm = 3;
+}
+
+// all known info available if request to db
+// only actual info available realtime with first state only
+// feel free to ask Evgeny Mironov about logic
+message Alert
+{
+    enum EInitiatorType
+    {
+        AIT_USER = 0;
+        AIT_MACRO = 1;
+    }
+
+    string guid = 1;
+    string timestamp = 2;
+    NodeRef node_info = 3;
+
+    ComponentRef camera = 11;
+    ComponentRef archive = 12;
+
+    MandatoryComment required_comment = 15;
+
+    EInitiatorType initiator_type = 21; // user or id of macro
+    int32 reason_mask = 22;
+    string initiator = 23; // user login or macro ID
+
+    repeated AlertState states = 31;
+    MacroEvent macro = 32;
+    DetectorEvent detector = 33;
+}
+
+message VolumeHealthEvent
+{
+    enum State
+    {
+        VH_CORRUPTED = 0;
+        VH_RESTORED = 1;
+    };
+}
+
+message ArchiveReplicationProgressEvent
+{
+    enum State
+    {
+        BSP_IN_PROGRESS = 0;
+        BSP_FINISHED = 1;
+        BSP_TIMEOUT_ERROR = 2;
+        BSP_INTERNAL_ERROR = 3;
+        BSP_NO_DATA = 4;
+    }
+
+    // Replication storage source id
+    string object_id = 1;
+    string timestamp = 2;
+    string position_ts = 3;
+    State state = 4;
+    string begin_time = 5;
+    string end_time = 6;
+    string guid = 7;
+    ComponentRef source_archive = 8;
+    ComponentRef storage_archive = 9;
+    ComponentRef origin = 10;
+}
+
+message LayoutsChangedEvent
+{
+    // Role or user id.
+    string subject_id = 1;
+
+    // The ID of the user that owns the layout
+    string owner_id = 7;
+
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        CHANGED = 1; // Created or modified layout
+        REMOVED = 2; // layout is removed
+
+        // Sharing of the layout was stopped for specific role ID.
+        // The actual owner of the layout should ignore this event.
+        SHARING_STOPPED = 6; 
+
+        ORDER = 3; // Layouts order or current layout is changed
+
+        // Modified (or created) layout's image
+        IMAGE_CHANGED = 4;
+
+        // Removed layout's image
+        IMAGE_REMOVED = 5;
+    }
+    ChangeAction action = 2;
+
+    // The following members are only for action != ORDER
+
+    // Modified layout id
+    string layout_id = 3;
+    // layout body revision
+    string etag = 4;
+
+    // Modified (or created) image ID
+    // (only for "action" == IMAGE_*).
+    string image_id = 5;
+
+    // Image revision
+    // (only for "action" == IMAGE_*)
+    string image_etag = 6;
+}
+
+message CloudConfigurationChangedEvent
+{
+    enum ChangeAction
+    {
+        BIND = 0;
+        UNBIND = 1;
+    }
+    ChangeAction action = 1;
+}
+
+message MapsChangedEvent
+{
+    // Role or user id.
+    string subject_id = 1;
+
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        CHANGED = 1; // Created or modified map
+        REMOVED = 2; // Map is removed
+        IMAGE = 3; // Image is changed
+        ORDER = 4; // Maps order changed
+        MARKERS = 5; // Markers on a map changed
+    }
+    ChangeAction action = 2;
+    
+    // The following members are only for action != ORDER
+    // Modified map id
+    string map_id = 3;
+    // Map body revision
+    string etag = 4;
+}
+
+// This event indicates that a list on the server has been changed.
+// Here list can hold realtime recognizer items (like faces or plates)
+message RRListChangedEvent
+{
+    enum EListType
+    {
+        ELT_Any = 0;
+        ELT_Face = 1;
+        ELT_LPR = 2;
+        ELT_Food = 3;
+        ELT_Unknown = 1000;
+    }
+
+    // List unique ID.
+    string list_id = 1;
+
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+        ADDED = 1; // created list
+        MODIFIED = 2; // modified list
+        REMOVED = 3; // removed list
+    }
+    ChangeAction action = 3;
+    string object_id = 6;
+    EListType list_type = 7;
+}
+
+// This event indicates that a map provider registered on the server has been changed.
+message MapProviderChangedEvent
+{
+    // A map provider unique ID.
+    string map_provider_id = 1;
+
+    // A description on what's happened with the map provider.
+    ChangeAction action = 2;
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+
+        // The map provider has been created.
+        ADDED = 1;
+
+        // The map provider has been modified.
+        CHANGED = 2;
+        
+        // The map provider has been removed.
+        REMOVED = 3;
+    }
+
+    // The updated etag of the map provider.
+    // This value is computed by the server, and should be send on update requests
+    // to ensure the client has an up-to-date value before proceeding.
+    // Empty if the provider has been removed.
+    string etag = 3;
+}
+
+message HostStatus
+{
+    enum ESystemIntegrityState
+    {
+        UNKNOWN = 0;
+        COMPROMISED = 1;
+        TRUSTED = 2;
+    };
+    enum EHostState
+    {
+        HOST_STARTED = 0;
+        HOST_STOPPED = 1;
+        HOST_CRASHED = 2;
+        HOST_ALIEN = 3;     // Хост запущен в другом домене.
+        HOST_FORBIDDEN = 4; // Лицензия на данный хост отсутствует.
+        HOST_UNKNOWN_STATE = 5;
+    };
+
+    string node_name = 1;
+    string node_display_name = 4;
+    string domain = 2;
+    string native_bl_endpoints = 3;
+    ESystemIntegrityState integrity = 5; 
+    EHostState status = 6;
+}
+
+// Internal event for caching HostStatus to spare clients
+// from implementing logic to track changes on cached HostStatus events
+message InternalHostStatus
+{
+    HostStatus item = 1;
+}
+
+message GroupMembershipChangedEvent
+{
+    string group_id = 1;
+}
+
+message ObjectActivatedEvent
+{
+    string guid = 1;
+    bool is_activated = 2;
+    string timestamp = 3;
+
+    ComponentRef object_id_ext = 4;
+    NodeRef node_info = 5;
+}
+
+message AxisState
+{
+    // Name of axis
+    string name = 1;
+    // Value of axis in range [-1, 1]
+    float value = 2;
+
+    enum EAxisType
+    {
+        Analog = 0;
+        Discrete = 1;
+    };
+    // Type of axis which needed for special behavior description
+    EAxisType type = 3;
+}
+
+message ControlPanelStateEvent
+{
+    // Event's GUID
+    string guid = 1;
+    string timestamp = 2;
+    string object_id = 3;
+    repeated AxisState axes = 4;
+    repeated int32 pressed_buttons = 5;
+}
+
+message ReplicationStateEvent
+{
+    string guid = 1;
+    string timestamp = 2;
+    
+    ComponentRef replica = 3;
+    
+    enum State
+    {
+        RS_UNKNOWN = 0;
+        RS_IN_PROGRESS = 1;
+        RS_IN_IDLE = 2;
+    }
+    State state = 5;
+}
+
+message ReplicationProgressEvent
+{
+    string guid = 1;
+    string timestamp = 2;
+    
+    ComponentRef replica = 3;
+
+    enum State
+    {
+        BSP_IN_PROGRESS = 0;
+        BSP_FINISHED = 1;
+        BSP_TIMEOUT_ERROR = 2;
+        BSP_INTERNAL_ERROR = 3;
+        BSP_NO_DATA = 4;
+    }
+    State state = 5;
+    
+    string progress_time = 11;
+    string begin_time = 12;
+    string end_time = 13;
+
+}
+
+message LoosingVmdaData
+{
+    string guid = 1;
+    string timestamp = 2;
+    NodeRef node_info = 3;
+    ComponentRef object_id = 4;
+}
+
+message ACFAEvent
+{
+    enum EEventPhase
+    {
+        MOMENTARY = 0;  // one-phase event, like "access was requested", "user passed the door"
+        BEGAN = 1;      // event changed to active
+        ENDED = 2;      // event changed to inactive
+        TECHNICAL = 3;  // momentary event, that should not be stored in DB too long, usually not important events like "device configuration read"
+        PERIODICAL = 4; // like signal level, events that is sending very ofthen
+    }
+
+    string guid = 1;
+    string uid = 2;
+    string timestamp = 3;
+
+    NodeRef node_info = 4;
+    ComponentRef object_id = 5;
+    ComponentRef root_object_id = 21;
+
+    message Event
+    {
+        string id = 1;
+        string name = 2;
+        map<string, string> params = 3;
+    }
+
+    message State
+    {
+        enum EStateType
+        {
+            ST_NORMAL = 0;
+            ST_WARNING = 1;
+            ST_ALARM = 2;
+            ST_FAILURE = 3;
+        }
+
+        string id = 1;
+        string name = 2;
+        EStateType type = 3;
+    }
+
+    oneof data
+    {
+        Event event = 10;
+        State state = 11;
+    }
+
+    EEventPhase phase = 15;
+    // include dynamic infromation of current event
+    string description = 17;
+    // localized event string to display in the client
+    string localized_string = 20;
+}
+
+message TextEvent
+{
+    string guid = 1;
+    string timestamp = 2;
+    NodeRef node_info = 3;
+    ComponentRef text_source = 4;
+
+    enum EEntirety
+    {
+        SingleTuple = 0;
+        FullTuple = 1;
+    }
+    EEntirety entirety = 5;
+    
+    string group_id = 6;
+    repeated ComponentRef linked_cameras = 7;
+
+    message TextTuple
+    {
+        string timestamp = 1;
+        string text = 2; // raw text from driver
+        string json = 3; // json data from driver
+    }
+
+    repeated TextTuple data = 11;
+}
+
+message IntegrityEvent
+{
+    enum EState
+    {
+        SI_UNKNOWN = 0;
+        SI_COMPROMISED = 1;
+        SI_TRUSTED = 2;
+    }
+
+    enum EManifestState
+    {
+        SI_MANIFEST_NOT_FOUND = 0;
+        SI_MANIFEST_UNSIGNED = 1;
+        SI_MANIFEST_SIGNATURE_ERROR = 2;
+        SI_MANIFEST_ERROR = 3;
+        SI_MANIFEST_TRUSTED = 4;
+    }
+
+    string guid = 1;
+    string timestamp = 2;
+    EState state = 3;
+    
+    NodeRef node_info = 4;
+    
+    message FileError
+    {
+        string file = 1;
+        string error = 2;
+    }
+    
+    message Manifests
+    {
+        string tag = 1;
+        EManifestState state = 2;
+        int32 files_checked = 3;
+        repeated FileError file_error = 4;
+    }
+    
+    repeated Manifests manifests = 5;   
+}
+
+message HidEvent
+{
+    string guid = 1;
+    string timestamp = 2;
+    
+    NodeRef node_info = 3;
+    
+    enum EHidEventState
+    {
+        HES_GENERIC_USB_DEVICE_ADD = 0;
+        HES_GENERIC_USB_DEVICE_REM = 1;
+        HES_VOLUME_ADD = 2;
+        HES_VOLUME_REM = 3;
+        HES_HID_ADD = 4;
+        HES_HID_REM = 5;
+        HES_POWER_ON = 6;
+        HES_POWER_BATTERY = 7;
+        HES_POWER_UPS = 8;
+        HES_SERIAL_PORT = 9;
+        HES_GSM_SERIAL_PORT = 10;
+    }
+    EHidEventState state = 4;
+}
+
+message SensorSignalLevelChanged
+{
+    string guid = 1;
+    string timestamp = 2;
+    NodeRef node_info = 3;
+    ComponentRef sensor = 4;
+    float level = 5;
+}
+
+enum ESeverity
+{
+    SEVERITY_UNSPECIFIED = 0;
+    S_LOW = 1;
+    S_MEDIUM = 5;
+    S_CRITICAL = 9;
+}
+
+message SystemError
+{
+    // Access point or well known external subject.
+    ComponentRef sender = 1;
+    
+    // Access points of affected objects.
+    repeated ComponentRef affected_objects = 2;
+    
+    ESeverity severity = 3;
+    
+    // Message that carries the error details.
+    google.protobuf.Any details = 6;
+}
+
+message SpecificObject
+{
+    enum EObjectType
+    {
+        OBJECT_TYPE_UNSPECIFIED = 0;
+        // path
+        // drive
+        // process
+    }
+    EObjectType type = 1;
+    string value = 2;
+}
+
+// Represents self-diagnosis alert rule activation.
+message DiagnosticAlertEvent
+{
+    enum EAlertType
+    {
+        ALERT_TYPE_UNSPECIFIED = 0;
+
+        // General system warnings.
+        AT_HANDLE_LEAK    = 1; // Process is using too much handles
+        AT_LOW_MEMORY     = 2; // Low OS virtual memory
+        AT_LOW_DISK_SPACE = 3; // Low disk free space
+
+        // NGP infrastructure malfunctions.
+        AT_ARCHIVE_NO_PING              = 1000; // Archive does not receiving detector events sent via LogicServer
+        AT_ARCHIVE_NO_SAMPLES           = 1001; // Archive with active Ipint sources not receiving input samples
+        AT_ARCHIVE_OVERLOADED           = 1002; // Archive performance is not enough to handle all the input frames
+        AT_ARCHIVE_SOURCE_NOT_ACTIVATED = 1003; // Archive source seems to be inactive
+        AT_DETECTOR_NO_SAMPLES          = 1100; // Detector with healthy Decoder source not receiving input samples
+        AT_IPINT_NO_SAMPLES             = 1200; // Ipint source not receiving new multimedia samples
+        AT_IPINT_NOT_ACTIVATED          = 1201; // Ipint service was started but not reported its activation
+        AT_STAT_SERVER_UNHEALTHY        = 1300; // Statistics server that collects internal metrics seems unhealthy
+    }
+    // Rule config info.
+    bool rule_enabled = 3;
+    string rule_name = 4;
+    string rule_comment = 5;
+
+    // Alert template info.
+    EAlertType alert_type = 7;
+    string alert_description = 6;
+
+    // Problem info.
+    google.protobuf.Timestamp timestamp = 10;
+    string problem_id = 9;
+    ESeverity severity = 11;
+    repeated ComponentRef affected_objects = 12;
+    repeated SpecificObject affected_objects_spec = 8;
+}
+
+// Represents self-diagnosis attempt to solve the problem.
+message DiagnosticActionEvent
+{
+    enum EActionType
+    {
+        ACTION_TYPE_UNSPECIFIED = 0;
+
+        AT_CLEANUP_DB      = 1; // Clean up database events (older than one week)
+        AT_CLEANUP_LOGS    = 2; // Clean up bulky data: logs, crash dumps, and etc.
+        AT_KILL_PROCESS    = 3; // Kill unwanted, faulty, or resource leaking process
+        AT_RESTART_SERVICE = 4; // Restart NGP services that seems malfunctioning
+    }
+    // Action template info.
+    EActionType action_type = 2;
+    string action_description = 3;
+
+    // Action info.
+    google.protobuf.Timestamp timestamp = 8;
+    string problem_id = 7;
+    string action_error = 4;
+    repeated ComponentRef affected_objects = 5;
+    repeated SpecificObject affected_objects_spec = 6;
+}
+
+// This event indicates that a configuration packet has been changed.
+message ConfigChangedEvent
+{
+    // A name of the configuration packet.
+    string name = 1;
+
+    // A type of the service.
+    string type = 4;
+
+    // A name of the node.
+    string node_name = 5;
+
+    // A description on what's happened with the configuration packet.
+    ChangeAction action = 2;
+    enum ChangeAction
+    {
+        CHANGE_ACTION_UNSPECIFIED = 0;
+
+        // The configuration packet has been created.
+        ADDED = 1;
+
+        // The configuration packet has been modified.
+        CHANGED = 2;
+        
+        // The configuration packet has been removed.
+        REMOVED = 3;
+    }
+
+    // The updated etag of the configuration packet.
+    // Empty if the packet has been removed.
+    string etag = 3;
+}
+
+// This event indicates that some links to the current configuration packet
+// have been added or removed, i.e. some other packets start or stop referring to the packet.
+message ConfigLinkageChangedEvent
+{
+    // A name of the configuration packet.
+    string name = 1;
+
+    // A type of the service.
+    string type = 2;
+
+    // A name of the node.
+    string node_name = 3;
+}
+
+message GlobalTrackProfileChangedEvent
+{
+
+}

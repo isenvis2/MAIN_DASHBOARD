@@ -1,0 +1,56 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+import "axxonsoft/bl/security/ObjectsPermissions.proto";
+
+message CameraPermissions
+{
+	ECameraAccess camera_access = 1;
+}
+
+message MicrophonePermissions
+{
+	EMicrophoneAccess microphone_access = 1;
+}
+
+message TelemetryPermissions
+{
+	ETelemetryPriority telemetry_priority = 1;
+}
+
+message ArchivePermissions
+{
+	EArchiveAccess archive_access = 1;
+}
+
+// Configured permissions to an ACFA device.
+message AcfaPermissions
+{
+	EAcfaAccess acfa_access = 1;
+}
+
+message VideoWallPermissions
+{
+	EVideowallAccess videowall_access = 1;
+}
+
+message ObjectPermissionsInfo
+{
+	string access_point = 1;
+	string display_name = 2;
+	string display_id = 3;
+	bool has_children =  4;
+	bool inherited =  5;
+
+	oneof permission {
+		CameraPermissions camera_permissions = 10;
+		MicrophonePermissions microphone_permissions = 11;
+		TelemetryPermissions telemetry_permissions = 12;
+		ArchivePermissions archive_permissions = 13;
+		AcfaPermissions acfa_permissions = 15;
+		VideoWallPermissions videowall_permissions = 14;
+	}
+}
+

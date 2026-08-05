@@ -1,0 +1,75 @@
+syntax = "proto3";
+package axxonsoft.bl.settings;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/settings";
+
+import "axxonsoft/bl/mmexport/Export.proto";
+
+// Describes the settings of the export.
+message ExportSettings
+{
+    // Export options.
+    ExportOptions options = 1;
+
+    // PDF background image.
+    FileData pdf_background = 2;
+
+    // Watermark image.
+    FileData watermark_image = 3;
+
+    // Font file.
+    FileData font_file = 4;
+}
+
+// pre-configured export options
+message ExportOptions
+{
+    // the max export file size without splitting into parts
+    uint64 max_file_size_bytes = 1;
+    // video file format
+    mmexport.StreamType.EFormat video_file_format = 2;
+    // image file format
+    mmexport.SnapshotType.EFormat image_file_format = 3;
+    // output video codec
+    mmexport.EVideoCodec video_codec = 4;
+    // output audio codec
+    mmexport.EAudioCodec audio_codec = 5;
+    // output video quality, set C_NORMAL to avoid video stream re-encoding
+    mmexport.EQuality video_quality = 6;
+    // output audio quality, set C_NORMAL to avoid audio stream re-encoding
+    mmexport.EQuality audio_quality = 7;
+    // honest decimation of the video stream, encoded streams will be re-encoded
+    mmexport.EFrameFrequency video_density = 8;
+    // time lapse, video streams will be decimated at least to keyframes
+    mmexport.TimeLapse time_lapse = 9;
+    // set this flag if you want to burn subtitles on AVI video frames or JPEG snapshot
+    bool burn_subtitles = 10;
+    // place of image on the frame
+    mmexport.ViewArea watermark_place = 11;
+    // opacity [0.0; 1.0]
+    float watermark_opacity = 12;
+    // pdf page orientation
+    mmexport.EPdfLayout pdf_layout = 13;
+    // place of snapshot on the pdf page
+    mmexport.ViewArea pdf_snapshot_place = 14;
+    // place of comment on the pdf page
+    mmexport.ViewArea pdf_comment_place = 15;
+    // place of timestamp on the pdf page
+    mmexport.ViewArea pdf_timestamp_place = 16;
+    // font face
+    string font_face = 17;
+    // font index in file
+    int32 font_index = 18;
+    // font size
+    float font_size = 19;
+    // font style
+    int32 font_style = 20;
+    // text color
+    mmexport.ColorInfo text_color = 21;
+}
+
+message FileData
+{
+    // the size of body must not exceed 1MB
+    bytes body = 1;
+}

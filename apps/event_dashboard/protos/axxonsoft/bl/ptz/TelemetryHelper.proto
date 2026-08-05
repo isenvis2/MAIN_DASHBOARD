@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package axxonsoft.bl.ptz;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/ptz";
+
+message Capabilities
+{
+	bool is_relative = 1;
+	bool is_continuous = 2;
+	bool is_absolute = 3;
+	bool is_auto = 4;
+}
+
+message Range
+{
+	int32 min = 1;
+	int32 max = 2;
+}
+
+message Limits
+{
+	Range relative_step = 1;
+	Range continuous_speed = 2;
+	Range absolute_position = 3;
+}

@@ -1,0 +1,265 @@
+syntax = "proto3";
+package axxonsoft.bl.realtimerecognizer;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/realtimerecognizer";
+
+import "axxonsoft/bl/events/Events.proto";
+
+message Image
+{
+    string id = 1; // guid; Leave empty for vectors.
+    bytes raw = 2; // Leave empty to delete image.
+    bool more = 3; // Shows whether there are more data to transfer.
+    int64 total_raw_data_size = 6; // Total size of the image. Must be provided with the first chunk of image.
+}
+
+message Images
+{
+    repeated Image images = 1;
+}
+
+enum DataType
+{
+    DT_ImageFace = 0;
+    DT_ImagesFood = 1;
+    DT_Plate = 2;
+    DT_Vector = 3;
+}
+
+// Extended meta info for faces.
+// Can be used when the Item type is DT_ImageFace
+message FaceMeta
+{
+    int32 age = 1;
+    events.DetectorEvent.FaceRecognitionResult.EGender gender = 2;
+    string full_name = 3;
+    string title = 4;
+    string department = 5;
+    string comment = 6;
+    string additional_comment = 7;
+}
+
+// Extended meta info for food.
+// Can be used when the Item type is DT_ImagesFood
+message FoodMeta
+{
+    enum EFoodType
+    {
+        FT_Unknown = 0;
+        FT_Drink = 1; // beverage
+        FT_Starter = 2; // first course
+        FT_Salad = 3; // salad
+        FT_Entree = 4; // main course
+        FT_Bakery = 5; // bakery products
+    }
+    EFoodType food_type = 1;
+}
+
+// Some describing information of the Item
+message Meta
+{
+    string name = 1; // friendly human readable name; will not be changed if empty; will be returned only if you do 'get' request
+    string description = 2; // will not be changed if empty; will be returned only if you do 'get' request
+    oneof extra_data
+    {
+        FaceMeta face_meta = 30; // Can be used when Item type is DT_ImageFace
+        FoodMeta food_meta = 31; // Can be used when Item type is DT_ImagesFood
+    }
+}
+
+message Item
+{
+    string id = 1; // guid; must be filled.
+    DataType type = 3;
+    oneof data
+    {
+        Meta data_meta = 10;
+        string data_string = 11; // expects for LPR
+        Images data_images = 12; // expects for Faces, Food and Vectors. Total size must not exceed 50mb per one Item.
+    }
+}
+
+enum EListType
+{
+    ELT_Any = 0;
+    ELT_Face = 1;
+    ELT_LPR = 2;
+    ELT_Food = 3;
+    ELT_Unknown = 1000;
+}
+
+message List
+{
+    string id = 1; // guid; if guid - the same will be returned in response
+    string name = 2; // friendly human readable name; will not be changed if empty; will be returned only if you do 'get' request
+    string description = 3; // will not be changed if empty; will be returned only if you do 'get' request
+    double score = 4; // minimal level of score with detected item; in range [0,1]; default is 0.85; will not be changed if 0 or negative; NO SUPPORT FOR LPR YET; will be returned only if you do 'get' request
+    repeated string item_ids = 5; // ids to be added to existing list or init with new.
+    repeated string item_ids_to_remove = 6; // ids to be removed from existing list.
+	
+    EListType type = 11;
+}
+
+message ChangeListsRequest
+{
+    repeated List added_lists = 1;
+    repeated List changed_lists = 2;
+    repeated string removed_list_ids = 3; // guids
+
+    // Name of node, or empty if current node is assumed.
+    string node_name = 10;
+}
+
+enum EPacketStatus
+{
+    EPS_SEQUENTIAL = 0;
+    EPS_LAST = 1;
+}
+
+message ChangeListsStreamRequest
+{
+    message ListIds
+    {
+        repeated string ids = 1; // guids
+    }
+	
+    EPacketStatus status = 1;
+    oneof data
+    {
+        List added_list = 2;
+        List changed_list = 3;
+        ListIds removed_lists = 4;
+    }
+}
+
+message ChangeListsResponse
+{
+    repeated string failed_lists = 1; // guids of failed lists
+}
+
+message ChangeListsStreamResponse
+{
+    repeated string failed_lists = 1; // guids of failed lists
+    EPacketStatus status = 2;
+}
+
+message RemovedItemIds
+{
+    repeated string removed_item_ids = 1; // guids
+}
+
+message ChangeItemsRequest
+{
+    // Set always status to EPS_LAST when sending last packet of the session.
+    // Otherwise it can be omitted.    
+    EPacketStatus status = 1;
+    oneof data
+    {
+        Item added_item = 2;
+        Item changed_item = 3;
+        RemovedItemIds removed_item = 4; // guids
+    }
+}
+
+message ChangeItemsResponse
+{
+    // Set always status to EPS_LAST when sending last packet of the session.
+    // Otherwise it can be omitted.    
+    EPacketStatus status = 1;
+    repeated string failed_items = 2; // guids
+    repeated string failed_images = 3; // guids
+}
+
+message GetListsRequest
+{
+    repeated string list_ids = 1; // any typable lists if empty
+    EListType type = 2;
+
+    // Name of node, or empty if current node is assumed.
+    string node_name = 10;
+}
+
+message GetListStreamRequest
+{
+    string list_id = 1;
+    EListType type = 2;
+
+    // Name of node, or empty if current node is assumed.
+    string node_name = 10;
+}
+
+message GetListsResponse
+{
+    repeated List lists = 1;
+}
+
+message GetListStreamResponse
+{
+    EPacketStatus status = 1;
+    List list = 2;
+}
+
+message RequiredItem
+{
+    string item_id = 1;
+    repeated string image_ids = 2;
+}
+
+message GetItemsRequest // OR between id_fer and item_ref
+{
+    repeated string item_ids = 1; // Deprecated, use required_items
+    
+    // If required_items is empty, GetItems returns all items but without images and vectors
+    // ignoring the actual fields values of load_images and load_vectors.
+    repeated RequiredItem required_items = 2;
+    
+    // load_images shows whether images should be returned in the result.
+    // load_vectors shows whether vectors should be returned in the result.
+    // Both images and vectors, can't be obtain in the request.
+    // If load_images and load_vectors are omitted result will be contain only id, type and metadata.
+    bool load_images = 12;
+    bool load_vectors = 13; // vectors
+
+    // Name of node, or empty if current node is assumed.
+    string node_name = 10;
+}
+
+message GetItemsResponse
+{
+    // Set always status to EPS_LAST when sending last packet of the session.
+    // Otherwise it can be omitted.    
+    EPacketStatus status = 1;
+    Item item = 2;
+}
+
+message ClearRequest
+{
+    // Name of node, or empty if current node is assumed.
+    string node_name = 10;
+}
+
+message ClearResponse
+{
+}
+
+service RealtimeRecognizerService
+{
+    rpc ChangeLists(ChangeListsRequest) returns (ChangeListsResponse); // Deprecated, use ChangeListsStream instead
+    rpc ChangeListsStream(stream ChangeListsStreamRequest) returns (stream ChangeListsStreamResponse);
+    
+    // ChangeItems adds/changes/removes Items.
+    // Since it is bidirectional stream, you can add/change/remove any number of Items per session.
+    // Send EPS_LAST with the last packet to close current session.
+    // Timeout for read or write packets is 10 seconds.
+    // Since the size of grpc packet is limited at 4mb client must break exceeding Item on smaller pieces.
+    // Total size of data_images, which is a part of Item, must not exceed 50mb per one Item.
+    rpc ChangeItems(stream ChangeItemsRequest) returns (stream ChangeItemsResponse);
+	
+    // warning: paging for 'get' requests doesn't support for now
+    rpc GetLists(GetListsRequest) returns (GetListsResponse); // Deprecated, use GetListsStream instead
+	rpc GetListStream(GetListStreamRequest) returns (stream GetListStreamResponse);
+    rpc GetItems(GetItemsRequest) returns (stream GetItemsResponse);
+    
+	// Remove all items and lists.
+    rpc Clear(ClearRequest) returns (ClearResponse);
+}

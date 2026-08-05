@@ -1,0 +1,29 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+// Describes restrictions.
+message Restrictions
+{
+    // Assigned limits.
+    repeated Limit limits = 1;
+}
+
+// Describes a limit.
+message Limit
+{
+    enum EType
+    {
+        TYPE_UNSPECIFIED = 0;
+
+        // The maximum count of video channels allowed to be shown on a layout.
+        VIDEO_CHANNELS_ON_LAYOUT = 1;
+    }
+
+    // Type of the limit. A resource that should be limited.
+    EType type = 1;
+
+    // Allowed amount of the limited resource.
+    uint64 value = 2;
+}

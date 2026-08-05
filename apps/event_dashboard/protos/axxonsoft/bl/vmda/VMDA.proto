@@ -1,0 +1,76 @@
+syntax = "proto3";
+package axxonsoft.bl.vmda;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/vmda";
+
+import "google/api/annotations.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+message EnumerateSchemesRequest
+{
+	string access_point = 1;
+	string language = 2;
+}
+
+message CameraAndSchemaIDs
+{
+	string camera_ID = 1;
+	string schema_ID = 2;
+}
+
+message EnumerateSchemesResponse
+{
+	repeated CameraAndSchemaIDs cs_IDs = 1;
+}
+
+message ExecuteQueryRequest
+{
+	string access_point = 1;
+	string camera_ID = 2;
+	string schema_ID = 3;
+	string dt_posix_start_time = 4;
+	string dt_posix_end_time = 5;
+	string query = 6;
+	string language = 7;
+}
+
+message ObjectVal
+{
+	uint64 id = 1;
+	double left = 2;
+	double top = 3;
+	double right = 4;
+	double bottom = 5;
+}
+
+message Interval
+{
+	primitive.TimeRange limit = 1;
+	repeated ObjectVal objects = 2;
+}
+
+message ExecuteQueryResponse
+{
+	repeated Interval intervals = 1;
+	string progress = 2;
+	string origin = 3;
+}
+
+message CleanupRequest
+{
+	string access_point = 1;
+	CameraAndSchemaIDs cs_IDs = 2;
+}
+
+message CleanupResponse
+{
+	bool result = 1;
+}
+
+service VMDAService
+{
+	// interface Database
+	rpc EnumerateSchemes(EnumerateSchemesRequest) returns (EnumerateSchemesResponse);
+	rpc Cleanup(CleanupRequest) returns (CleanupResponse);
+	rpc ExecuteQuery(ExecuteQueryRequest) returns (stream ExecuteQueryResponse);
+}

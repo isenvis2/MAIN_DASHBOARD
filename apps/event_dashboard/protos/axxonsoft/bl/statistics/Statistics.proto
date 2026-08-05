@@ -1,0 +1,87 @@
+syntax = "proto3";
+package axxonsoft.bl.statistics;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/statistics";
+
+import "google/api/annotations.proto";
+
+
+enum StatPointType
+{
+    SPT_LiveFPS = 0;                   // double
+    SPT_LiveBitrate = 1;               // uint64_t
+    SPT_LiveWidth = 2;                 // uint32_t
+    SPT_LiveHeight = 3;                // uint32_t
+    SPT_LiveMediaType = 4;             // uint32_t
+    SPT_LiveStreamType = 5;            // uint32_t
+    SPT_ServiceState = 6;              // uint32_t, 0 or 1
+    SPT_ArchiveChannelFPS = 7;         // double
+    SPT_ArchiveChannelBitrate = 8;     // uint64_t, bit/sec
+    SPT_ArchiveChannelLoss = 9;        // double, %
+    SPT_ReplicaChannelProgress = 10;   // uint64_t, timestamp
+    SPT_ReplicaChannelState = 11;      // uint32_t, 0 or 1
+    SPT_ArchiveFeedOverflow = 12;      // double, %, name of volume in format similar to hosts/node/MultimediaStorage.AliceBlue/MultimediaStorage@D:/archiveAliceBlue.afs
+    SPT_ArchiveVolumeWriteSpeed = 13;  // uint64_t, bit/sec, name of volume in format similar to hosts/node/MultimediaStorage.AliceBlue/MultimediaStorage@D:/archiveAliceBlue.afs
+    SPT_ArchiveVolumeReadSpeed = 14;   // uint64_t, bit/sec, name of volume in format similar to hosts/node/MultimediaStorage.AliceBlue/MultimediaStorage@D:/archiveAliceBlue.afs
+    SPT_ArchiveVolumeWriteRatio = 15;  // double, %
+    SPT_ArchiveVolumeReadRatio = 16;   // double, %
+    SPT_ArchiveVolumeState = 17;       // uint32_t, 0 or 1
+    SPT_CpuTotalUsage = 18;            // double, %, name field contains node name
+    SPT_MemoryTotalUsage = 19;         // double, %, name field contains node name
+    SPT_NetMaxUsage = 20;              // double, %, name field contains node name
+    SPT_DiskSpaceUsage = 21;           // double, %, name field contains node name and disk letter similar to node@C
+    SPT_ArchiveVolumeUsage = 22;       // double, %, name of volume in format similar to hosts/node/MultimediaStorage.AliceBlue/MultimediaStorage@D:/archiveAliceBlue.afs
+    SPT_ArchiveUsage = 23;             // double, %
+    SPT_LiveKeyFPS = 26;               // double
+    SPT_WaterLevel = 27;               // double
+    SPT_ArchiveChannelStarving = 28;   // uint32_t, 0 or 1
+    SPT_MacroHitRate = 29;             // double
+
+    // Please add valid values above.
+    SPT_Unknown = 1000;
+}
+
+message StatPointKey
+{
+    StatPointType type = 1;
+    string name = 2;
+}
+
+message StatPoint
+{
+    string hint = 1;
+    StatPointKey key = 2;
+    
+    oneof value
+    {
+        int32 value_int32 = 20;
+        uint32 value_uint32 = 21;
+        int64 value_int64 = 22;
+        uint64 value_uint64 = 23;
+        double value_double = 24;
+    }
+
+    message Label
+    {
+        string name = 1;
+        string value = 2;
+    }
+
+    repeated Label labels = 3;
+}
+
+message StatsRequest
+{
+    repeated StatPointKey keys = 1;
+}
+
+message StatsResponse
+{
+    repeated StatPoint stats = 1;
+    repeated StatPointKey fails = 2;
+}
+
+service StatisticService
+{
+    rpc GetStatistics(StatsRequest) returns (StatsResponse);
+}

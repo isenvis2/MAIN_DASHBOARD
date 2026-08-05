@@ -1,0 +1,64 @@
+syntax = "proto3";
+package axxonsoft.bl.archive;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/archive";
+
+import "google/api/annotations.proto";
+
+message IsBackupInProgressRequest
+{
+    string access_point = 1;
+}
+
+message BackupTimeInterval
+{
+    uint64 beginTime = 1;
+    uint64 endTime = 2;
+}
+
+message IsBackupInProgressResponse
+{
+    bool in_progress = 1;
+}
+
+message MakeBackupRequest
+{
+    string access_point = 1;
+    repeated BackupTimeInterval intervals = 2;
+}
+
+message MakeBackupResponse
+{
+    string task_id = 1;
+    string worker_id = 2;
+}
+
+message CancelBackupResponse
+{
+}
+
+message CancelBackupRequest
+{
+    string access_point = 1;
+    string task_id = 2;
+}
+
+message GetRestProgressRequest
+{
+    string access_point = 1;
+    uint64 time = 2;
+}
+
+message GetRestProgressResponse
+{
+    uint64 remaining_duration = 1;
+    string worker_id = 2;
+}
+
+service BackupSourceService
+{
+    rpc MakeBackup(MakeBackupRequest) returns (MakeBackupResponse);
+    rpc CancelBackup(CancelBackupRequest) returns (CancelBackupResponse);
+    rpc IsBackupInProgress(IsBackupInProgressRequest) returns (IsBackupInProgressResponse);
+    rpc GetRestProgress(GetRestProgressRequest) returns (GetRestProgressResponse);
+}

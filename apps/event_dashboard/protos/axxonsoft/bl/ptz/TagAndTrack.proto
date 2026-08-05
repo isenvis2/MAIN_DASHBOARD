@@ -1,0 +1,108 @@
+syntax = "proto3";
+package axxonsoft.bl.ptz;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/ptz";
+
+import "google/api/annotations.proto";
+
+import "axxonsoft/bl/ptz/Telemetry.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+
+enum ETagAndTrackMode
+{
+    TAG_AND_TRACK_EVENT_TYPE_OFF = 0;
+    TAG_AND_TRACK_EVENT_TYPE_MANUAL = 1;
+    TAG_AND_TRACK_EVENT_TYPE_AUTOMATIC = 2;
+    TAG_AND_TRACK_EVENT_TYPE_USER_PRIORITY = 3;
+    TAG_AND_TRACK_EVENT_TYPE_USER_PRIORITY_MANUAL = 4;
+}
+
+message TnTCalibrationPoint
+{
+    primitive.Point image_position = 1;
+    AbsolutePosition ptz_position = 2;
+}
+
+message TnTTracker
+{
+    string id = 1;
+    repeated TnTCalibrationPoint calibration_points = 4;
+
+    reserved 2, 3;
+    reserved "image_width", "image_height";
+}
+
+message ListTnTTrackersRequest
+{
+    string access_point = 1;
+}
+
+message ListTnTTrackersResponse
+{
+    ETagAndTrackMode mode = 1;
+    repeated TnTTracker trackers = 2;
+}
+
+message TnTFollowTrackRequest
+{
+    string access_point = 1;
+    string tracker_id = 2;
+    int32 track_id = 3;
+}
+
+message TnTFollowTrackResponse
+{
+}
+
+message TnTMoveToCoordsRequest
+{
+    string access_point = 1;
+    string tracker_id = 2;
+    double x = 3;
+    double y = 4;
+}
+
+message TnTMoveToCoordsResponse
+{
+}
+
+message SetModeRequest
+{
+    string access_point = 1;
+    ETagAndTrackMode mode = 2;
+}
+
+message SetModeResponse
+{
+}
+
+service TagAndTrackService
+{
+    rpc ListTrackers(ListTnTTrackersRequest) returns (ListTnTTrackersResponse){
+        option (google.api.http) = {
+            get: "/v1/tag_and_track/trackers"
+        };
+    };
+	
+    rpc SetMode(SetModeRequest) returns (SetModeResponse){
+        option (google.api.http) = {
+            post: "/v1/tag_and_track/action:mode"
+            body: "*"
+        };
+    };
+
+    rpc FollowTrack(TnTFollowTrackRequest) returns (TnTFollowTrackResponse){
+        option (google.api.http) = {
+            post: "/v1/tag_and_track/action:follow"
+            body: "*"
+        };
+    };
+
+    rpc MoveToCoords(TnTMoveToCoordsRequest) returns (TnTMoveToCoordsResponse){
+        option (google.api.http) = {
+            post: "/v1/tag_and_track/action:move"
+            body: "*"
+        };
+    };
+}

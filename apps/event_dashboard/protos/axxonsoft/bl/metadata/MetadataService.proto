@@ -1,0 +1,159 @@
+syntax = "proto3";
+package axxonsoft.bl.metadata;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/metadata";
+
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "axxonsoft/bl/media/Media.proto";
+
+
+enum ObjectState
+{
+    OBJECT_STATE_UNSPECIFIED = 0;
+    OBJECT_STATE_APPEARED = 1;
+    OBJECT_STATE_NORMAL = 2;
+    OBJECT_STATE_DISAPPEARED = 3;
+}
+
+enum ObjectType
+{
+    OBJECT_TYPE_UNSPECIFIED = 0;
+    OBJECT_TYPE_HUMAN = 1;
+    OBJECT_TYPE_GROUP_OF_HUMANS = 2;
+    OBJECT_TYPE_VEHICLE = 3;
+    reserved 4;
+    OBJECT_TYPE_FACE = 5;
+    OBJECT_TYPE_ANIMAL = 6;
+    OBJECT_TYPE_ROBOT_DOG = 7;
+    OBJECT_TYPE_CHILD = 17;
+    OBJECT_TYPE_CAT = 18;
+}
+
+message Tracklet
+{
+    enum ObjectBehavior
+    {
+        OBJECT_BEHAVIOR_UNSPECIFIED = 0;
+        MOVING_OBJECT = 1;
+        ABANDONED_OBJECT = 2;
+        ABANDONED_TAKEN_OBJECT = 3;
+        ABANDONED_GIVEN_OBJECT = 4;
+    }
+
+    int32 id = 1;
+    ObjectState state = 2;
+    
+    // if state == DISAPPEARED then rectangle may be uninitialized
+    primitive.Rectangle rectangle = 3;
+
+    // optional fields
+    primitive.Point logical_center = 4;
+    primitive.HsvColor color = 5;
+    ObjectType type = 6;
+    ObjectBehavior behavior = 7;
+    primitive.Temperature temperature = 8;
+}
+
+message Tracklets
+{
+    repeated Tracklet tracklets = 1;
+}
+
+message MapPoint
+{
+    string map_id = 1;
+    primitive.Point3d point = 2;
+}
+
+message CameraFrameArea
+{
+    primitive.Rectangle area = 1;
+    string timestamp = 2;
+    string camera_id = 3;
+}
+
+message GlobalTracklet
+{
+    enum GlobalTrackState
+    {
+        GT_STATE_UNSPECIFIED = 0;
+        GT_STATE_APPEARED = 1;
+        GT_STATE_NORMAL = 2;
+        GT_STATE_RECOGNIZED = 3;
+        GT_STATE_DISAPPEARED = 4;
+        GT_STATE_TERMINATED = 5;
+
+        GT_STATE_UNKNOWN = 1000;
+    }
+
+    message Profile
+    {
+        string id = 1;
+        string detection_time = 2;
+        string detection_camera = 3;
+        primitive.Rectangle detection_rect = 4;
+    }
+
+    string guid = 1;
+    Profile profile = 7;
+    GlobalTrackState state = 2;
+    ObjectType type = 3;
+    repeated MapPoint on_map_positions = 4;
+    repeated MapPoint velocities = 5;
+    repeated CameraFrameArea on_camera_positions = 6;
+}
+
+message GlobalTracklets
+{
+    repeated GlobalTracklet tracklets = 1;
+}
+
+message MetadataSample
+{
+    string timestamp = 1;
+    oneof data
+    {
+        Tracklets tracklets = 2;
+        GlobalTracklets global_tracklets = 3;
+    }
+}
+
+message PullMetadataResponse
+{
+
+    message HeartBeat{};
+    oneof data
+    {
+        MetadataSample sample = 1;
+        HeartBeat heartbeat = 2;
+        StreamConfig config_update = 16;
+    }
+}
+
+message PullMetadataRequest
+{
+    uint32 count = 1;
+
+    /* accepted only on initial request, subsequent values ignored */
+    media.EndpointRef endpoint = 2;
+
+    // During initial request client can propose channel idle timeout,
+    // server is responsible to respond with StreamConfig message
+    // that contains actual channel timeout.
+    // To keep channel alive peers need to keep sending packets when
+    // channel is idle:
+    //      * client sends empty MediaRequest message
+    //      * server sends special HeartBeat message
+    int32 proposed_channel_idle_ms = 16;
+}
+
+message StreamConfig
+{
+    // see MediaRequest.proposed_channel_idle_ms for more info. 
+    int32 max_channel_idle_ms = 1;
+}
+
+service MetadataService
+{
+    rpc PullMetadata(stream PullMetadataRequest) returns (stream PullMetadataResponse);
+}

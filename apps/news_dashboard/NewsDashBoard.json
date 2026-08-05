@@ -1,0 +1,15 @@
+{
+  "AIAnal": true,
+  "ReportDate": 30,
+  "RowsPerPage": 100,
+  "StartDayPage": 517,
+  "EndPage": 539,
+  "LastPage": 539,
+  "BackwardScanLimit": 3,
+  "ForwardScanLimit": 3,
+  "LOAD_TIME": 15,
+  "LOAD_TRY_TIME": 5,
+  "ScrollSpeed": 30,
+  "ScrollPauseSeconds": 5,
+  "StopPosi": 0
+}

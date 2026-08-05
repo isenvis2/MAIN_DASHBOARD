@@ -1,0 +1,361 @@
+syntax = "proto3";
+package axxonsoft.bl.events;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/events";
+
+import "google/api/annotations.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "axxonsoft/bl/events/Notification.proto";
+import "axxonsoft/bl/events/Events.proto";
+
+// Can be used for internal needs for indexed fields only
+message SearchByFieldFilter
+{
+    // full path to field inside event, ignore if related is empty
+    // For example: "'body'->'macro'->>'guid'"
+    string full_path_to_field = 1;
+    // id value, guid in most cases
+    string value = 2;
+}
+
+message SearchFilter
+{
+    EEventType type = 1;
+    // subjects are access points of sources or objects of events
+    // For example: hosts/Node1/DeviceIpint.1
+    // All access points of SearchFilter must be on the same node.
+    repeated string subjects = 2;
+    // values are some filed values of events
+    // using for exact matching.
+    // Event will be returned, if one of subjects exactly matches with a field value. 
+    repeated string values = 3;
+    // text are some filed values of events
+    // using for partial matching.
+    // Event will be returned, if a field value contains one of text.
+    repeated string texts = 4;
+    // Please use careful!
+    // This is the way to implenent filtration by any stringify field (include enums) for any storable event
+    // No guaranty that it makes your search faster
+    repeated SearchByFieldFilter indexed_values = 5;
+}
+
+message AlertsSearchFilter
+{
+    repeated string subjects = 2;
+    // values are some filed values of events
+    // using for exact matching.
+    // Event will be returned, if one of subjects exactly matches with a field value. 
+    repeated string values = 3;
+    // text are some filed values of events
+    // using for partial matching.
+    // Event will be returned, if a field value contains one of text.
+    repeated string texts = 4;
+}
+
+message LprSearchFilter
+{
+    repeated string subjects = 2;
+    // values are some filed values of events
+    // using for exact matching.
+    // Event will be returned, if one of subjects exactly matches with a field value. 
+    repeated string values = 3;
+    // text are some filed values of events
+    // using for partial matching.
+    // Event will be returned, if a field value contains one of text.
+    repeated string texts = 4;
+}
+
+message VehicleSearchFilter
+{
+    message Country
+    {
+        string value = 1;
+    }
+    message State
+    {
+        string value = 1;
+    }
+
+    DetectorEvent.AutoRecognitionResultEx.Direction direction = 1;
+    DetectorEvent.AutoRecognitionResultEx.VehicleClass class = 2;
+    DetectorEvent.AutoRecognitionResultEx.VehicleColor color = 3;
+    DetectorEvent.AutoRecognitionResultEx.VehicleBrand brand = 4;
+    DetectorEvent.AutoRecognitionResultEx.VehicleModel model = 5;
+    DetectorEvent.AutoRecognitionResultEx.HeadlightsStatus headlights_status = 6;
+    DetectorEvent.AutoRecognitionResultEx.VehicleSpeed speed_from_kmph = 7;
+    DetectorEvent.AutoRecognitionResultEx.VehicleSpeed speed_to_kmph = 8;
+    DetectorEvent.AutoRecognitionResultEx.VehiclePurpose purpose = 11;
+    Country country = 9;
+    State plate_state = 10;
+}
+
+message LprSearchFilterArray
+{
+    repeated LprSearchFilter filters = 1;
+    // specify many vehicle filters to find more then one vehicle
+    repeated VehicleSearchFilter vehicle_filters = 2;
+}
+
+message AlertsSearchFilterArray
+{
+    repeated AlertsSearchFilter filters = 1;
+}
+
+message SearchFilterArray
+{
+    repeated SearchFilter filters = 1;
+}
+
+message SearchTextFilter
+{
+    repeated string subjects = 2;
+    repeated string texts = 4;
+
+    // To allow additionaly filter text fields inside json if they don't have text specified by user.
+    // For example. If cash receipt contains bread, water and butter and user expects to find only the butter,
+    // we can filter other products by setting flag to 1. 
+    // But if user wants to see whole cash receipt that contains butter, the flag shoult be 0.
+    bool filter_containing_text_parts = 5;
+}
+
+message SearchTextFilterArray
+{
+    repeated SearchTextFilter filters = 1;
+}
+
+message SimilarObject
+{
+    DetectorEvent event  = 1;
+    float score = 2;
+}
+
+message NodeDescription
+{
+    string node_name = 1;
+}
+
+message ReadEventsRequest
+{
+    primitive.TimeRange range = 1;
+    SearchFilterArray filters = 2;
+    uint64 limit = 3;
+    uint64 offset = 4;
+    repeated NodeDescription node_descriptions = 5;
+    bool descending = 6; // Defines result order by appearance time: true - descending otherwise ascending.
+    bool internal = 7;
+}
+
+message BookmarkSearchFilter
+{
+    repeated string subjects = 1;
+    // text are some filed values of events
+    // using for partial matching.
+    // Event will be returned, if a field value contains one of text.
+    string comment_text = 2;
+}
+
+message ReadBookmarksRequest
+{
+    primitive.TimeRange range = 1;
+    BookmarkSearchFilter filter = 2;
+    uint64 limit = 3;
+    uint64 offset = 4;
+    repeated NodeDescription node_descriptions = 5;
+    bool descending = 6; // Defines result order by appearance time: true - descending otherwise ascending. 
+}
+
+message ReadEventsResponse
+{
+    repeated Event items = 1;
+    repeated string unreachable_subjects = 2;
+}
+
+message ReadCountRequest
+{
+    primitive.TimeRange range = 1;
+    SearchFilterArray filters = 2;
+    NodeDescription node_description = 3;
+}
+
+message ReadCountResponse
+{
+    uint64 count = 1;
+    string node_name = 2;
+    repeated string unreachable_subjects = 3;
+}
+
+message ReadTextEventsRequest
+{
+    primitive.TimeRange range = 1;
+    SearchTextFilterArray filters = 2;
+    uint64 limit = 3;
+    uint64 offset = 4;
+    repeated NodeDescription node_descriptions = 5;
+    bool descending = 6; // Defines result order by appearance time: true - descending otherwise ascending. 
+}
+
+message ReadTextEventsResponse
+{
+    repeated TextEvent items = 1;
+    repeated string unreachable_subjects = 2;
+}
+
+message ReadTextCountRequest
+{
+    primitive.TimeRange range = 1;
+    SearchTextFilterArray filters = 2;
+    NodeDescription node_description = 3;
+}
+
+message ReadTextCountResponse
+{
+    uint64 count = 1;
+    string node_name = 2;
+    repeated string unreachable_subjects = 3;
+}
+
+message ReadAlertsRequest
+{
+    primitive.TimeRange range = 1;
+    AlertsSearchFilterArray filters = 2;
+    uint64 limit = 3;
+    uint64 offset = 4;
+    repeated NodeDescription node_descriptions = 5;
+    bool descending = 6; // Defines result order by appearance time: true - descending otherwise ascending. 
+}
+
+message ReadAlertsResponse
+{
+    repeated Event items = 1;
+    repeated string unreachable_subjects = 2;
+}
+
+message ReadLprEventsRequest
+{
+    primitive.TimeRange range = 1;
+    LprSearchFilterArray filters = 2;
+    uint64 limit = 3;
+    uint64 offset = 4;
+    string search_predicate = 5;
+    repeated NodeDescription node_descriptions = 6;
+    bool descending = 7; // Defines result order by appearance time: true - descending otherwise ascending.
+}
+
+message ReadLprEventsResponse
+{
+    repeated Event items = 1;
+    repeated string unreachable_subjects = 2;
+}
+
+message ReadBookmarksResponse
+{
+    repeated Event items = 1;
+    repeated string unreachable_subjects = 2;
+}
+
+message FindSimilarObjectsRequest
+{
+    uint64 session = 1;
+    bool is_face = 2;
+    
+    primitive.TimeRange range = 3;
+    float minimal_score = 4;
+    repeated string object_ids = 5;
+    repeated string origin_ids = 6;
+
+    uint64 limit = 7;
+    uint64 offset = 8;
+    oneof data
+    {
+        bytes jpeg_image = 9;
+        string timestamp = 10;
+    }
+
+    repeated NodeDescription node_descriptions = 11;
+}
+
+message FindSimilarObjectsResponse
+{
+    repeated SimilarObject items = 1;
+    uint64 offset = 2;
+}
+
+
+message FindStrangersByObjectsRequest
+{
+    uint64 session = 1;
+    bool is_face = 2;
+    float minimal_score = 3;
+    bytes jpeg_image = 4;
+    repeated string object_ids = 5;
+    repeated string origin_ids = 6;
+    repeated NodeDescription node_descriptions = 7;
+}
+
+message FindStrangersByObjectsResponse
+{
+    repeated SimilarObject items = 1;
+}
+
+message FindStrangersRequest
+{
+    uint64 session = 1;
+    bool is_face = 2;
+    float minimal_score = 3;
+    primitive.TimeRange range = 4;
+    repeated string origin_ids = 5;
+    uint64 limit = 6;
+    uint64 offset = 7;
+    repeated NodeDescription node_descriptions = 8;
+}
+
+message FindStrangersResponse
+{
+    repeated SimilarObject items = 1;
+}
+
+message FindContactsRequest
+{
+    uint64 session = 1;   
+    primitive.TimeRange range = 2;
+    float minimal_score = 3;
+    uint64 contact_interval = 4; 
+    repeated string object_ids = 5;
+    repeated string origin_ids = 6;
+    uint64 limit = 7;	    
+    string page_token = 8;
+    repeated NodeDescription node_descriptions = 9;
+	
+    oneof data
+    {
+        bytes jpeg_image = 21;
+        string timestamp = 22;
+    }
+}
+message FindContactsResponse
+{
+    repeated Event items = 1;
+    repeated string unreachable_subjects = 2;
+    string next_page_token = 3;
+}
+
+service EventHistoryService
+{
+    rpc ReadEvents(ReadEventsRequest) returns (stream ReadEventsResponse);
+    rpc ReadCount(ReadCountRequest) returns (stream ReadCountResponse);
+    rpc ReadTextEvents(ReadTextEventsRequest) returns (stream ReadTextEventsResponse);
+    rpc ReadTextCount(ReadTextCountRequest) returns (stream ReadTextCountResponse);
+    rpc ReadAlerts(ReadAlertsRequest) returns (stream ReadAlertsResponse);
+    rpc ReadLprEvents(ReadLprEventsRequest) returns (stream ReadLprEventsResponse);
+	
+    // Returns events of type ET_Bookmark.
+    // ReadEvents with type ET_Bookmark returns the same.
+    // The only difference is that ReadEvents returns events wich [creation_time_of_event >= ReadEventsRequest.range.begin_time , creation_time_of_event <= ReadEventsRequest.range.end_time],
+    // While ReadBookmarks returns events wich [Bookmark.range.begin_time >= ReadEventsRequest.range.begin_time , Bookmarkrange.range.end_time <= ReadEventsRequest.range.end_time]
+    rpc ReadBookmarks(ReadBookmarksRequest) returns (stream ReadBookmarksResponse);
+
+    rpc FindSimilarObjects(FindSimilarObjectsRequest) returns (stream FindSimilarObjectsResponse);
+    rpc FindStrangersByObjects(FindStrangersByObjectsRequest) returns (stream FindStrangersByObjectsResponse);
+    rpc FindStrangers(FindStrangersRequest) returns (stream FindStrangersResponse);
+    rpc FindContacts (FindContactsRequest) returns (stream FindContactsResponse);
+}

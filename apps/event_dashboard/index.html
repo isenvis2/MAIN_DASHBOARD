@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>재난안전공유플랫폼 이벤트 대시보드</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#0f172a; color:#e2e8f0; font-family:"Segoe UI","맑은 고딕",Arial,sans-serif; }
+    body.dashboard-cursor-hidden, body.dashboard-cursor-hidden * { cursor:none !important; }
+    .event-root { width:100%; height:100%; display:flex; flex-direction:column; min-height:0; background:#0f172a; }
+    .platform-title-header { min-height:168px; padding:28px 40px 34px; display:flex; align-items:center; justify-content:space-between; gap:28px; background:#001B3D; border-bottom:1px solid rgba(255,255,255,.12); position:fixed; top:0; left:0; right:0; z-index:50; }
+    .platform-title-left { display:flex; align-items:center; gap:22px; min-width:0; }
+    .platform-shield { width:58px; height:58px; color:#d83a4a; flex:0 0 auto; }
+    .platform-title-main { font-size:44px; line-height:1.08; font-weight:900; letter-spacing:-.05em; color:#fff; white-space:nowrap; }
+    .platform-title-main span { color:#4ea1ff; font-weight:300; }
+    .platform-title-sub { margin-top:16px; font-family:Consolas,Menlo,monospace; font-size:20px; font-weight:800; letter-spacing:.16em; color:rgba(255,255,255,.52); white-space:nowrap; }
+    .platform-title-right { text-align:right; white-space:nowrap; flex:0 0 auto; }
+    .platform-date { font-family:Consolas,Menlo,monospace; font-size:34px; font-weight:800; color:#fff; letter-spacing:.04em; }
+    .platform-state { margin-top:14px; font-family:Consolas,Menlo,monospace; font-size:18px; letter-spacing:.12em; color:rgba(255,255,255,.42); }
+    body:not(.embedded) .event-root { height:calc(100% - 168px); margin-top:168px; }
+    body.embedded .platform-title-header { display:none; }
+    body.embedded .event-root { margin-top:0; height:100%; }
+
+    .event-header { height:36px; flex:0 0 36px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; background:#1e293b; border-bottom:1px solid #334155; }
+    .event-title { font-size:12px; font-weight:800; white-space:nowrap; flex:0 0 auto; }
+    .event-status { display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; max-width:calc(100% - 118px); font-size:11px; color:#94a3b8; overflow:hidden; white-space:nowrap; }
+    .event-status #statusText { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    body.embedded .event-header { padding-right:104px; }
+    body.embedded .event-status { max-width:calc(100% - 214px); }
+    .status-dot { width:8px; height:8px; border-radius:50%; background:#64748b; flex:0 0 auto; }
+    .status-dot.online { background:#34d399; box-shadow:0 0 10px rgba(52,211,153,.55); }
+    .status-dot.error { background:#f87171; box-shadow:0 0 10px rgba(248,113,113,.55); }
+    .event-strip { flex:1; min-height:0; display:flex; gap:12px; overflow-x:auto; overflow-y:hidden; padding:12px; scroll-behavior:smooth; }
+    .event-strip::-webkit-scrollbar { height:8px; }
+    .event-strip::-webkit-scrollbar-thumb { background:#334155; border-radius:999px; }
+    .empty-state { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; text-align:center; border:1px dashed #334155; border-radius:10px; background:#111827; }
+    .event-card { position:relative; width:190px; height:112px; flex:0 0 190px; overflow:hidden; border:1px solid #334155; border-radius:10px; background:#111827; box-shadow:0 6px 16px rgba(0,0,0,.22); }
+    .event-card.newest { border-color:#60a5fa; box-shadow:0 0 0 1px rgba(96,165,250,.28),0 6px 16px rgba(0,0,0,.22); }
+    .crop-canvas { width:100%; height:100%; display:block; background:#000; cursor:pointer; }
+    .event-card:hover .crop-canvas { filter:brightness(1.14); }
+    .event-caption { position:absolute; left:0; right:0; bottom:0; padding:6px 8px; background:linear-gradient(180deg, transparent, rgba(0,0,0,.86) 26%, rgba(0,0,0,.88)); pointer-events:none; }
+    .event-type { font-size:11px; line-height:1.15; font-weight:800; color:#f8fafc; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .event-meta { margin-top:2px; display:flex; justify-content:space-between; gap:6px; color:#cbd5e1; font-size:10px; line-height:1.2; }
+    .event-camera { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .event-time { flex:0 0 auto; color:#93c5fd; }
+    #modal-overlay { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.92); justify-content:center; align-items:center; flex-direction:column; cursor:zoom-out; }
+    #modal-container { position:relative; display:inline-block; max-width:92vw; max-height:82vh; }
+    #modal-image { max-width:92vw; max-height:82vh; display:block; border-radius:8px; }
+    #modal-box { position:absolute; border:3px solid #ff2a2a; background:rgba(255,42,42,.18); box-sizing:border-box; pointer-events:none; display:none; }
+    #modal-caption { margin-top:14px; color:#fff; background:rgba(15,23,42,.8); border:1px solid #334155; padding:8px 16px; border-radius:999px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <header class="platform-title-header" aria-label="재난안전공유플랫폼 이벤트 대시보드 타이틀">
+    <div class="platform-title-left">
+      <svg class="platform-shield" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3 5 6v5c0 4.8 3 8.2 7 10 4-1.8 7-5.2 7-10V6l-7-3Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+        <path d="M12 7v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+        <circle cx="12" cy="16.5" r="1" fill="currentColor"/>
+      </svg>
+      <div>
+        <div class="platform-title-main">재난안전공유플랫폼 <span>이벤트 대시보드</span></div>
+        <div class="platform-title-sub">MINISTRY OF THE INTERIOR AND SAFETY | EMERGENCY ALERT SYSTEM</div>
+      </div>
+    </div>
+    <div class="platform-title-right">
+      <div id="platformToday" class="platform-date">-</div>
+      <div class="platform-state">REAL-TIME MONITORING ACTIVE</div>
+    </div>
+  </header>
+
+  <div class="event-root">
+    <div class="event-header">
+      <div class="event-title">이벤트 스냅샷</div>
+      <div class="event-status"><span id="statusDot" class="status-dot"></span><span id="statusText">VMS 이벤트 연결 준비 중</span></div>
+    </div>
+    <div id="event-grid" class="event-strip">
+      <div id="emptyState" class="empty-state">Axxon ONE 이벤트를 기다리는 중입니다.</div>
+    </div>
+  </div>
+
+  <div id="modal-overlay" onclick="closeModal()">
+    <div id="modal-container">
+      <img id="modal-image" src="" alt="이벤트 전체 화면">
+      <div id="modal-box"></div>
+    </div>
+    <div id="modal-caption"></div>
+  </div>
+
+  <script>
+    (function markEmbeddedMode() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1' || window.parent !== window) {
+        document.body.classList.add('embedded');
+      }
+    })();
+    const socket = io();
+    const platformToday = document.getElementById('platformToday');
+    if (platformToday) platformToday.textContent = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+    let MAX_EVENTS = 1000;
+    const eventGrid = document.getElementById('event-grid');
+    const emptyState = document.getElementById('emptyState');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalImage = document.getElementById('modal-image');
+    const modalBox = document.getElementById('modal-box');
+    const modalCaption = document.getElementById('modal-caption');
+
+    function notifyParentSync(status) {
+      if (!isEmbeddedInParentDashboard()) return;
+      try { window.parent.postMessage({ type: 'panel-sync', panel: 'event', status }, '*'); } catch (e) {}
+    }
+
+    function setConnStatus(text, cls = '') {
+      statusText.textContent = text;
+      statusDot.className = `status-dot ${cls}`.trim();
+      if (cls === 'online') notifyParentSync('success');
+      if (cls === 'error') notifyParentSync('error');
+    }
+    socket.on('connect', () => { notifyParentSync('loading'); setConnStatus('브라우저 연결됨 · VMS 이벤트 대기', 'online'); });
+    socket.on('disconnect', () => setConnStatus('이벤트 서버 연결 끊김', 'error'));
+    socket.on('connect_error', () => setConnStatus('이벤트 서버 연결 실패', 'error'));
+
+    function applyDashboardSettings(settings) {
+      const parsed = Number.parseInt(settings && (settings.maxSize ?? settings.MAX_SIZE), 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        MAX_EVENTS = parsed;
+        removeOverflowCards();
+      }
+    }
+
+    fetch('/api/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(applyDashboardSettings)
+      .catch(() => {});
+
+    socket.on('dashboard_settings', applyDashboardSettings);
+    socket.on('vms_status', (data) => {
+      if (!data) return;
+      setConnStatus(data.message || 'VMS 상태 수신', data.ok ? 'online' : 'error');
+    });
+
+    function closeModal() {
+      modalOverlay.style.display = 'none';
+      modalImage.src = '';
+      modalBox.style.display = 'none';
+    }
+
+    function clampNumber(value, min, max) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return min;
+      return Math.min(Math.max(n, min), max);
+    }
+
+    function normalizeCrop(crop) {
+      if (!crop) return null;
+      const x = Number(crop.x);
+      const y = Number(crop.y);
+      const w = Number(crop.w);
+      const h = Number(crop.h);
+      if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) return null;
+
+      const left = clampNumber(x, 0, 1);
+      const top = clampNumber(y, 0, 1);
+      const right = clampNumber(x + w, 0, 1);
+      const bottom = clampNumber(y + h, 0, 1);
+      if (right <= left || bottom <= top) return null;
+      return { x: left, y: top, w: right - left, h: bottom - top };
+    }
+
+    function setModalCropBox(crop) {
+      const normalized = normalizeCrop(crop);
+      if (!normalized) {
+        modalBox.style.display = 'none';
+        return;
+      }
+
+      const imageW = modalImage.clientWidth;
+      const imageH = modalImage.clientHeight;
+      if (imageW <= 0 || imageH <= 0) {
+        modalBox.style.display = 'none';
+        return;
+      }
+
+      let left = normalized.x * imageW;
+      let top = normalized.y * imageH;
+      let right = left + normalized.w * imageW;
+      let bottom = top + normalized.h * imageH;
+
+      left = clampNumber(left, 0, imageW);
+      top = clampNumber(top, 0, imageH);
+      right = clampNumber(right, 0, imageW);
+      bottom = clampNumber(bottom, 0, imageH);
+
+      if (right <= left || bottom <= top) {
+        modalBox.style.display = 'none';
+        return;
+      }
+
+      modalBox.style.display = 'block';
+      modalBox.style.left = left + 'px';
+      modalBox.style.top = top + 'px';
+      modalBox.style.width = (right - left) + 'px';
+      modalBox.style.height = (bottom - top) + 'px';
+    }
+
+    function isEmbeddedInParentDashboard() {
+      try { return window.parent && window.parent !== window; }
+      catch (e) { return false; }
+    }
+
+    function openSelectedEventImage(imageUrl, data) {
+      if (isEmbeddedInParentDashboard()) {
+        window.parent.postMessage({
+          type: 'event-dashboard:image-selected',
+          imageUrl,
+          cameraId: data.cameraId || 'Unknown',
+          eventSource: data.eventSource || data.source || data.cameraId || 'Unknown',
+          cameraName: data.cameraName || data.cameraId || 'Unknown',
+          eventType: data.eventType || data.eventName || '이벤트',
+          eventName: data.eventName || data.eventType || '이벤트',
+          eventMessage: data.eventMessage || data.message || data.eventType || '이벤트',
+          rawEventText: data.rawEventText || data.eventType || data.eventName || '',
+          timestamp: data.timestamp || '',
+          crop: data.crop || null
+        }, '*');
+        return;
+      }
+
+      modalImage.onload = () => setModalCropBox(data.crop);
+      modalImage.src = imageUrl;
+      modalCaption.innerText = `[전체화면] ${data.cameraId || 'Unknown'} - ${data.eventType || '이벤트'}`;
+      modalOverlay.style.display = 'flex';
+      if (modalImage.complete) setModalCropBox(data.crop);
+    }
+
+    function formatTime(value) {
+      const dt = new Date(value);
+      if (Number.isNaN(dt.getTime())) return String(value || '').slice(11, 19) || '--:--:--';
+      return dt.toLocaleTimeString('ko-KR', { hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    function removeOverflowCards() {
+      const cards = eventGrid.querySelectorAll('.event-card');
+      cards.forEach((card, idx) => { if (idx >= MAX_EVENTS) card.remove(); });
+    }
+    function markNewest(card) {
+      eventGrid.querySelectorAll('.event-card.newest').forEach(el => el.classList.remove('newest'));
+      card.classList.add('newest');
+    }
+
+    socket.on('vms_event', (data) => {
+      if (emptyState) emptyState.remove();
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.title = '클릭하여 전체 화면 보기';
+
+      const encodedCamBase64 = btoa(unescape(encodeURIComponent(data.cameraId || 'Unknown')));
+      const proxyUrl = `/api/image?camBase64=${encodedCamBase64}&timestamp=${encodeURIComponent(data.timestamp || new Date().toISOString())}`;
+
+      card.innerHTML = `
+        <canvas class="crop-canvas" width="380" height="224"></canvas>
+        <div class="event-caption">
+          <div class="event-type">${escapeHtml(data.eventType || '이벤트')}</div>
+          <div class="event-meta">
+            <span class="event-camera">${escapeHtml(data.cameraId || 'Unknown')}</span>
+            <span class="event-time">${escapeHtml(formatTime(data.timestamp))}</span>
+          </div>
+        </div>`;
+      eventGrid.prepend(card);
+      markNewest(card);
+      removeOverflowCards();
+      setConnStatus(`이벤트 수신: ${formatTime(data.timestamp)} · 보관 ${eventGrid.querySelectorAll('.event-card').length}/${MAX_EVENTS}`, 'online');
+      notifyParentSync('success');
+
+      const canvas = card.querySelector('.crop-canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        try {
+          if (data.crop && data.crop.w > 0 && data.crop.h > 0) {
+            const sx = data.crop.x * img.naturalWidth;
+            const sy = data.crop.y * img.naturalHeight;
+            const sw = data.crop.w * img.naturalWidth;
+            const sh = data.crop.h * img.naturalHeight;
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+          } else {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          }
+        } catch (e) {
+          ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#94a3b8'; ctx.font = '18px sans-serif'; ctx.fillText('이미지 표시 실패', 20, 40);
+        }
+        canvas.onclick = () => openSelectedEventImage(img.src, data);
+      };
+      img.onerror = () => {
+        ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#f87171'; ctx.font = '18px sans-serif'; ctx.fillText('이미지 로드 실패', 20, 40);
+      };
+      img.src = proxyUrl;
+    });
+
+    (function initCursorAutoHide(idleMs) {
+      let hideTimer = null;
+      const showCursor = () => {
+        document.body.classList.remove('dashboard-cursor-hidden');
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => document.body.classList.add('dashboard-cursor-hidden'), idleMs);
+      };
+      ['mousemove','mousedown','mouseup','mouseenter','mouseleave','wheel','touchstart','touchmove','pointermove','keydown'].forEach((evt) => {
+        window.addEventListener(evt, showCursor, { passive:true });
+      });
+      showCursor();
+    })(10000);
+  </script>
+</body>
+</html>

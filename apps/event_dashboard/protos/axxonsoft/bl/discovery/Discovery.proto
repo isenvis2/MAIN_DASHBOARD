@@ -1,0 +1,85 @@
+syntax = "proto3";
+package axxonsoft.bl.discovery;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/discovery";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+
+enum EProgressState
+{
+    PROGRESS_STATE_NEVER_RAN = 0;
+    PROGRESS_STATE_RUNNING = 1;
+    PROGRESS_STATE_COMPLETED = 2;
+    PROGRESS_STATE_INTERRUPTED = 3;
+}
+
+enum EDeviceCategory
+{
+    DEVICE_CATEGORY_UNSPECIFIED = 0;
+    IP_DEVICE               = 1;
+    IP_DEVICE_WITH_STORAGE  = 2;
+    TEXT_EVENT_DEVICE       = 3;
+    ACFA_DEVICE             = 4;
+}
+
+enum ESupportMode
+{
+    UNSUPPORTED = 0;
+    PARTIAL_SUPPORT = 1;
+    FULL_SUPPORT = 2;
+}
+
+message DeviceDescription
+{
+    string driver = 1;
+    string driver_version = 2;
+    string mac_address = 3;
+    string ip_address = 4;
+    string wan_address = 5;
+    uint32 ip_port = 6;
+    string vendor = 7;
+    string model = 8;
+    string firmware_version = 9;
+    string device_description = 10;
+    repeated EDeviceCategory categories = 11;
+    ESupportMode support_mode = 12;
+}
+
+message DiscoveryRequest
+{
+    string node = 1;
+}
+
+message GetDiscoveryProgressResponse
+{
+    EProgressState state = 1;
+    bool has_new_data = 2;
+    int32 promille = 3;
+    sint64 finished_time = 4;
+    repeated DeviceDescription device_description = 5;
+}
+
+message ProbeRequest
+{
+    string connection_info = 1;
+    string brand = 2;
+    string node = 3;
+}
+
+message ProbeResponse
+{
+    repeated DeviceDescription device_description = 1;
+}
+
+service DiscoveryService
+{
+    // obsolete, use DiscoverNode instead
+    rpc Discover(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc DiscoverNode(DiscoveryRequest) returns (google.protobuf.Empty);
+    // obsolete, use GetNodeDiscoveryProgress instead
+    rpc GetDiscoveryProgress(google.protobuf.Empty) returns (stream GetDiscoveryProgressResponse);
+    rpc GetNodeDiscoveryProgress(DiscoveryRequest) returns (stream GetDiscoveryProgressResponse);
+    rpc Probe(ProbeRequest) returns (ProbeResponse);
+}

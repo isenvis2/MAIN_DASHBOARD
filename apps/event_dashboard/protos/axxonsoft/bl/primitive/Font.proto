@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package axxonsoft.bl.primitive;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/primitive";
+
+import "axxonsoft/bl/primitive/Color.proto";
+
+message Font
+{
+    // Specifies style information applied to text.
+    enum EStyle
+    {
+        // Normal text.
+        REGULAR   = 0x0;
+
+        // Bold text.
+        BOLD      = 0x1;
+
+        // Italic text.
+        ITALIC    = 0x2;
+
+        // Underlined text.
+        UNDERLINE = 0x4;
+
+        // Text with a line through the middle.
+        STRIKEOUT = 0x8;
+    }
+
+    // Font name.
+    string name = 1;
+
+    // Relative size. A size in points is defined by the equation:
+    // 
+    //   `(size in points) = (this size) * (frame's height)`
+    //
+    float size = 2;
+
+    primitive.Color color = 3;
+
+    EStyle style = 4;
+}

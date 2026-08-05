@@ -1,0 +1,468 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+import "axxonsoft/bl/config/Property.proto";
+import "axxonsoft/bl/config/PropertyDescriptor.proto";
+import "google/api/annotations.proto";
+
+enum EUnitStatus
+{
+    UNIT_STATUS_UNSPECIFIED = 0;
+    UNIT_STATUS_ACTIVE = 1;
+    UNIT_STATUS_INACTIVE = 2;
+}
+
+message ResetOperation
+{
+    string id = 1;
+    string display_name = 2;
+
+    // TODO: think about add repeated google.protobuf.Any args = 3;
+}
+
+message UnitDescriptor
+{
+    // Unit identifier. Full unique unit identifier
+    string uid = 1;
+    
+    // Short id, usually unique only within direct parent context.
+    // Can be paired with type and used in UI as more user friendly identifier.
+    string display_id = 2;
+
+    // Unit type: can be Speaker, VideoChannel, Microphone, Telemetry and so on. 
+    string type = 3;
+
+    // User specified or properly localized name for unit.
+    string display_name = 4;
+
+    // Access point 
+    string access_point = 5;
+
+    // Current or initialization params.
+    repeated PropertyDescriptor properties = 6;
+
+    // A set of properties that characterize current unit (can't be configured).
+    repeated PropertyDescriptor traits = 16;
+
+    // A set of operations that is available to perform on the unit configuration
+    repeated ResetOperation reset_operations = 19;
+
+    // Initialized sub-units, if any.
+    repeated UnitDescriptor units = 7;
+
+    // Factory params for sub-units that can be created.
+    repeated UnitDescriptor factory = 8;
+
+    repeated PropertyDescriptor destruction_args = 9;
+    
+    // Parent unit can discover this unit types
+    bool discoverable = 10;
+
+    // Unit activations status
+    EUnitStatus status = 11;
+    
+    // True if current unit description is incomplete.
+    // To obtain full unit description client should request
+    // ListUnits with current unit id. 
+    // TODO: make it bitfield of values: what is specifically stripped:
+    // it can be childs, dynamic settings, factory params and so on
+    // It can be better to signal that usit has dynamic settings and dynamic factory params
+    bool stripped = 12;
+
+
+    // User-defined params stored in unit configuration.
+    // Please mind about name conflict's when choosing param id.
+    // Warning: not all units supports such params.
+    // TODO: think about using special flag to signal that unit supports opaque_params.
+    repeated PropertyDescriptor opaque_params = 13;
+
+    // Read-only list of assigened template id's.
+    // In order to update the list, please use SetTemplateAssignments operation.
+    repeated string assigned_templates = 14;
+
+    // Unit has assigned, but not applied templates
+    bool has_unapplied_templates = 15;
+
+    // A name of the packet that stores configuration of the unit.
+    string config_name = 17;
+
+    // Current ETag of the configuration packet.
+    string config_etag = 18;
+}
+
+message Unit
+{
+    // Unit identifier. Full unit identifier consists all parents of unit separated by '/'
+    string uid = 1;
+    
+    // Unit type: can be Speaker, VideoChannel, Microphone, Telemetry and so on. 
+    string type = 2;
+
+    // Parameters to set, if any
+    repeated Property properties = 3;
+
+    // Child units
+    repeated Unit units = 4;
+
+    // User-defined params stored in unit configuration.
+    // Property with id and no value effectevly removes existing param. 
+    repeated Property opaque_params = 5;
+
+    // List of templates' ids to assign.
+    // Note: This field is taken into account only during unit's creation.
+    // To update the list afterwards, use SetTemplateAssignments operation.
+    repeated string assigned_templates = 6;
+}
+
+enum EUnitDisplayMode
+{
+    VM_FULL = 0x000;
+    VM_WITH_PROPERTIES = 0x001; //to get UD with current properties.
+    VM_WITH_PROPERTY_RANGES = 0x002; //to get UD with current properties and their possible values.
+    VM_WITH_SUB_UNITS = 0x004; //to get UD with sub units.
+    VM_WITH_FACTORY = 0x008; // to get UD with factory params for sub-units that can be created.
+}
+
+message ListUnitsRequest
+{
+    // Add unit types
+    // Add paging
+    // add max count
+    repeated string unit_uids = 1;
+
+    // Bitfield of EUnitDisplayMode enums
+    // Use display_mode to get stripped unit description (UD)
+    // If it is omitted (or equal to zero) full UD will be returned.
+    // display_mode it is a mask, so the modes can be combined.
+    int32 display_mode = 3;
+}
+
+message ListUnitsByAccessPointsRequest
+{
+    repeated string access_points = 1;
+    int32 display_mode = 3;
+}
+
+message ListUnitsStreamRequest
+{
+    repeated string unit_uids = 1;
+    int32 portion_size = 2;
+    
+    // Bitfield of EUnitDisplayMode enums
+    // Use display_mode to get stripped unit description (UD)
+    // If it is omitted (or equal to zero) full UD will be returned.
+    // display_mode it is a mask, so the modes can be combined.
+    int32 display_mode = 3;
+}
+
+message ListUnitsResponse
+{
+    // Found results
+    repeated UnitDescriptor units = 1;
+    // Temporary unavailable objects
+    repeated string unreachable_objects = 2;
+    // Objects does not exists
+    repeated string not_found_objects = 3;
+    bool more_data = 4;
+
+    // Extern enumeration for properties
+    // Key for this map is a name that is given in PropertyAttribute.
+    map<string, EnumerationConstraints> extern_enum_constraints = 5;
+}
+
+message ListUnitsByAccessPointsStreamRequest
+{
+    repeated string access_points = 1;
+    int32 portion_size = 2;
+    
+    // Bitfield of EUnitDisplayMode enums
+    // Use display_mode to get stripped unit description (UD)
+    // If it is omitted (or equal to zero) full UD will be returned.
+    // display_mode it is a mask, so the modes can be combined.
+    int32 display_mode = 3;
+}
+
+message ResetUnit
+{
+    string uid = 1;
+    string operation_id = 2;
+}
+
+message ChangeConfigRequest
+{
+    repeated Unit added = 1;
+	
+    // force_add_units indicates that will be added as much units as possible.
+    bool force_add_units = 5;
+	
+    repeated Unit changed = 2;
+    repeated Unit removed = 3;
+    repeated ResetUnit reset_units = 4;
+}
+
+message ChangeConfigResponse
+{
+    // TODO: add unit id's of actually added changed and removed objects
+    repeated Unit failed = 1;
+
+    // Newly added unit id's. It's handy to find out generated uid's.'
+    repeated string added = 2;
+
+    // Ids of macroses that was created or removed as a result of local configuration change
+    repeated string added_macros = 3;
+    repeated string removed_macros = 4;
+}
+
+message Template
+{
+    // template unique id
+    string id = 1;
+    string name = 2;
+    Unit unit = 3;
+}
+
+message TaggedTemplate
+{
+    Template body = 1;
+    string etag = 2;
+}
+
+message ListTemplatesRequest
+{
+    // TODO: filter (only shared templates) ?
+    // there are no use count currently
+
+    enum EViewMode
+    {
+        // Include only basic info.
+        VIEW_MODE_STRIPPED = 0;
+    
+        // Full template info including body.
+        VIEW_MODE_FULL = 1;
+    }
+
+    EViewMode view = 1;
+}
+
+message ListTemplatesResponse
+{
+    repeated TaggedTemplate items = 1;
+}
+
+message ChangeTemplatesRequest
+{
+    // Provide new template to create.
+    // Template id's are generated by client side,
+    // using GUID as template id is recomended.
+    repeated Template created = 1;
+
+    // Provide list of updated templates.
+    // Dirty writes are prevented using etag value.
+    repeated TaggedTemplate modified = 2;
+
+    // Specify list of template id's to remove
+    repeated string removed = 3;
+}
+
+message ChangeTemplatesResponse
+{
+}
+
+message TemplateAssignment
+{
+    // Refers to units 'uid' field.
+    string unit_id = 1;
+    // Ordered list of assigned template id.
+    repeated string template_ids = 2;
+}
+
+message SetTemplateAssignmentsRequest
+{
+    repeated TemplateAssignment items = 1;
+}
+
+message SetTemplateAssignmentsResponse
+{
+    repeated string failed = 1;
+}
+
+
+message BatchGetTemplatesRequest
+{
+    message Locator
+    {
+        string id = 1;
+        string etag = 2;
+    }
+    repeated Locator items = 1;
+}
+
+message BatchGetTemplatesResponse
+{
+    repeated TaggedTemplate items = 1;
+    repeated string not_found = 2;
+}
+
+message RequestedFactory
+{
+    string unit_type = 1;
+}
+
+message BatchGetFactoriesRequest
+{
+    repeated RequestedFactory factories = 1;
+}
+
+message BatchGetFactoriesResponse
+{
+    message Item
+    {
+        RequestedFactory requested = 1;
+
+        enum EStatus {
+            OK = 0;
+            NOT_FOUND = 1;
+            UNREACHABLE = 2;
+        }
+
+        EStatus status = 2;
+        UnitDescriptor factory = 3;
+    }
+
+    repeated Item items = 1;
+}
+
+message ListSimilarUnitsRequest
+{
+    string uid = 1;
+
+    // node_name indicates where to look for similar units.
+    string node_name = 2;
+    // The maximum value is 1000; values above 1000 will be coerced to 1000.
+    int32 page_size = 3;
+    string page_token = 4;
+
+    enum ESearchMode
+    {
+        // Default mode, the similarity criteria will be chosen by server
+        STANDARD = 0;
+        // Used for getting all units correspond to specified type
+        BY_UNIT_TYPE = 1;
+    }
+    ESearchMode search_mode = 5;
+}
+
+message SimilarUnit
+{
+    // Unit identifier. Full unit identifier consists all parents of unit separated by '/'
+    string uid = 1;
+    
+    // Unit type: can be Speaker, VideoChannel, Microphone, Telemetry and so on. 
+    string type = 2;
+
+    // Display name of unit. 
+    string display_name = 3;
+
+    // Display id of unit. 
+    string display_id = 4;
+
+    // Parent units.
+    SimilarUnit parent = 5;
+}
+
+message ListSimilarUnitsResponse
+{
+    repeated SimilarUnit similar_units = 1;
+	
+    // Not empty page_token means there are more information.
+    // In that case use the field in the next request, filling accordingly ListSimilarUnitsRequest.
+    string next_page_token = 2;
+}
+
+//
+// ## Localization
+//
+// The service supports localization. To inform the service about its language
+// preferences, a gRPC-client should add "accept-language" metaparameter
+// to its requests. A language is described by its locale identifier
+// (like 'en', 'en-US'). More than one language could be passed comma-separated.
+// If none of the requested languages is available or the metaparameter is omitted,
+// the service uses server's default language (which may depend on the OS localization settings).
+//
+service ConfigurationService
+{
+    // Deprecated. Use ListUnitsStream.
+    rpc ListUnits (ListUnitsRequest) returns (ListUnitsResponse) {
+        // List method maps to HTTP GET.
+        option (google.api.http) = {
+        get: "/v1/configurator/list"
+      };
+    }
+    
+    rpc ListUnitsStream (ListUnitsStreamRequest) returns (stream ListUnitsResponse);
+    
+    // ListUnitsByAccessPoints and ListUnitsByAccessPointsStream return the same result as ListUnits and ListUnitsStream.
+    // The only difference is they operate with access_points (from DomainService) instead of unit_uids
+    rpc ListUnitsByAccessPoints (ListUnitsByAccessPointsRequest) returns (ListUnitsResponse) {
+        option (google.api.http) = {
+        get: "/v1/configurator/get"
+      };
+    }
+
+    rpc ListUnitsByAccessPointsStream (ListUnitsByAccessPointsStreamRequest) returns (stream ListUnitsResponse);
+
+    rpc ChangeConfig (ChangeConfigRequest) returns (ChangeConfigResponse)  {
+        option (google.api.http) = {
+            post: "/v1/configurator:change"
+            body: "*"
+        };
+    }
+    
+    rpc ChangeConfigStream (ChangeConfigRequest) returns (stream ChangeConfigResponse);
+
+    rpc ListTemplates (ListTemplatesRequest) returns (ListTemplatesResponse)  {
+        option (google.api.http) = {
+            get: "/v1/configurator/templates"
+        };
+    }
+
+    rpc ChangeTemplates (ChangeTemplatesRequest) returns (ChangeTemplatesResponse)  {
+        option (google.api.http) = {
+            post: "/v1/configurator/templates:change"
+            body: "*"
+        };
+    }
+
+    rpc SetTemplateAssignments (SetTemplateAssignmentsRequest) returns (SetTemplateAssignmentsResponse)  {
+        option (google.api.http) = {
+            post: "/v1/configurator/assignments"
+            body: "*"
+        };
+    }
+
+    rpc BatchGetTemplates (BatchGetTemplatesRequest) returns (BatchGetTemplatesResponse)  {
+        option (google.api.http) = {
+             post: "/v1/configurator/templates:batchGet"
+             body: "*"
+        };
+    }
+
+    rpc BatchGetFactories(BatchGetFactoriesRequest) returns (BatchGetFactoriesResponse) {
+        option (google.api.http) = {
+             post: "/v1/configurator/factories:batchGet"
+             body: "*"
+        };
+    }
+	
+    // Method returns units similar to the specified one.
+    // What is considered to be similar is decided by the server.
+    rpc ListSimilarUnits(ListSimilarUnitsRequest) returns (ListSimilarUnitsResponse) {
+        option (google.api.http) = {
+             post: "/v1/configurator/units:listSimilar"
+             body: "*"
+        };
+    }
+}
+

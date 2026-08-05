@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "cameras": {
+    "video1": {
+      "ok": true,
+      "tcpReachable": true,
+      "rtspProbeOk": true,
+      "reason": "RTSP video stream 확인 완료",
+      "host": "192.168.0.52",
+      "port": 554,
+      "sourceType": "rtsp+",
+      "sourceUrl": "rtsp://admin:admin@192.168.0.52/video1+audio1",
+      "video": {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "avgFrameRate": "30/1"
+      },
+      "lastCheckedAt": "2026-07-24T00:18:30.223Z"
+    },
+    "cam002": {
+      "ok": true,
+      "tcpReachable": true,
+      "rtspProbeOk": true,
+      "reason": "RTSP video stream 확인 완료",
+      "host": "192.168.0.67",
+      "port": 554,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.16/SourceEndpoint.video:0:0",
+      "video": {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "avgFrameRate": "15/1"
+      },
+      "lastCheckedAt": "2026-07-24T00:36:04.545Z"
+    },
+    "cam003": {
+      "ok": true,
+      "tcpReachable": true,
+      "rtspProbeOk": true,
+      "reason": "RTSP video stream 확인 완료",
+      "host": "192.168.0.67",
+      "port": 554,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.17/SourceEndpoint.video:0:0",
+      "video": {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "avgFrameRate": "15000/517"
+      },
+      "lastCheckedAt": "2026-07-24T00:36:10.394Z"
+    },
+    "cam001": {
+      "ok": true,
+      "tcpReachable": true,
+      "rtspProbeOk": true,
+      "reason": "RTSP video stream 확인 완료",
+      "host": "192.168.0.67",
+      "port": 554,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.14/SourceEndpoint.video:0:0",
+      "video": {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "avgFrameRate": "0/0"
+      },
+      "lastCheckedAt": "2026-07-24T00:35:57.991Z"
+    },
+    "cam004": {
+      "ok": true,
+      "tcpReachable": true,
+      "rtspProbeOk": true,
+      "reason": "RTSP video stream 확인 완료",
+      "host": "192.168.0.67",
+      "port": 554,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.15/SourceEndpoint.video:0:0",
+      "video": {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "avgFrameRate": "30/1"
+      },
+      "lastCheckedAt": "2026-07-23T01:08:40.044Z"
+    }
+  },
+  "savedAt": "2026-07-24T00:36:10.922Z"
+}

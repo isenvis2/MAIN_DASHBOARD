@@ -1,0 +1,227 @@
+syntax = "proto3";
+package axxonsoft.bl.vmda2;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/vmda2";
+
+import "google/api/annotations.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+
+message ObjectVal
+{
+    uint64 id = 1;
+    double left = 2;
+    double top = 3;
+    double right = 4;
+    double bottom = 5;
+}
+
+message Interval
+{
+    // Timerange of detected event
+    primitive.TimeRange timerange = 1;
+    repeated ObjectVal objects = 2;
+}
+
+enum ObjectType
+{
+    OBJECT_TYPE_UNSPECIFIED = 0;
+    FACE = 1;
+    HUMAN = 2;
+    GROUP = 4;
+    VEHICLE = 8;
+};
+
+enum ObjectBehaviour
+{
+    OBJECT_BEHAVIOUR_UNSPECIFIED = 0;
+    MOVING = 1;
+    ABANDONED = 2;
+}
+
+enum EnterExit
+{
+    ENTEREXIT_UNSPECIFIED = 0;
+    Enter = 1;
+    Exit = 2;
+};
+
+enum Direction
+{
+    DIRECTION_UNSPECIFIED = 0;
+    Left = 1;
+    Right = 2;
+    Up = 3;
+    Down = 4;
+    LeftUp = 5;
+    LeftDown = 6;
+    RightUp = 7;
+    RightDown = 8;
+};
+
+message DoubleValueRange
+{
+    double min = 1;
+    double max = 2;
+}
+
+// Aditional query constraints on found objects.
+message Constraints
+{
+    // Allowed range of object. Measured in fractions of frame width [0,1].
+    primitive.Size min_size = 1;
+    primitive.Size max_size = 2;
+
+    // Color range. Zero values means unspecified.
+    // Hue in range [0, 360.0]
+    // Saturation in [0, 1.0]
+    // Value in [0, 1.0]
+    primitive.HsvColorRange color = 3;
+    
+    // Allowed object types.
+    repeated ObjectType object_types = 4;
+    // Allowed object behaviours
+    repeated ObjectBehaviour behaviours = 5;
+    
+    // Trigers only on entering/exiting zone 
+    EnterExit enter_exit = 7;
+    
+    // Array of allowed directions.
+    repeated Direction directions = 8;
+
+    // Zero value means that specific component (min/max) is not used.
+    // Velocity valid value range [0..100.0]
+    // Measures percent of scene per-second.
+    DoubleValueRange velocity = 9;
+}
+
+// Search for objects moving in specified area.
+message MotionInArea
+{
+    // Simple polygon is expected.
+    // Note. In a simple polygon the (side) lines don't intersect. 
+    primitive.Polyline area = 1;
+}
+
+enum CrossDirection
+{
+    ECD_Both = 0; // Use the both.
+    Positive = 1; // Only crossing in positive direction
+    Negative = 2; // Only crossing in negative direction
+};
+
+// Search for passing through specified line segment.
+message LineCrossing
+{
+    // Oriented line segment. (begin)--->(end)
+    primitive.Polyline line = 1;
+
+    // Crossing line segment treated as oriented, i.e. it has direction from
+    // point Line.Begin to point Line.End.
+    // Consequently crossing direction (as vector) can have positive or negative angle 
+    // with line segment treated as vector.
+    // We define crossing direction as *positive* if it's vector has positive angle
+    // with the oriented segment (trated as vector).
+    // 
+    // Short math reminder: Counterclockwise is the positive rotation direction and 
+    // clockwise is the negative direction.
+    // Examples:
+    // 
+    //       ^                  ^                  ^
+    //       |                  |                  |
+    //       |                  |                  |
+    //       |             +----------->     <-----------+
+    //       |                  |                  |
+    //       |                  |                  |
+    //       +                  +                  +
+    //     Oriented          Positive          Negative
+    //      line             crossing          crossing
+    //     segment           direction         direction
+    CrossDirection direction = 2;
+};
+
+// Search for objects moving in specified area.
+message Loitering
+{
+    // Simple polygon is expected.
+    // Note. In a simple polygon the (side) lines don't intersect. 
+    primitive.Polyline area = 1;
+    
+    // Duration of stay in zone. 
+    // Measured in seconds. 
+    int32 duration = 2;
+}
+
+message SearchTracksRequest
+{
+    // VMDA database access point
+    // TODO: do we really need this
+    string db_ap = 1;
+    
+    // Metadata source access point
+    string data_source_ap = 2;
+
+    // Time interval to query
+    primitive.TimeRange timerange = 3;
+
+    // Pass search token to skip previus search sessions results.
+    string page_token = 4;
+
+    // Results count per batch to return.
+    int32 page_size = 5;
+
+    Constraints additional_filters = 6;
+
+    oneof query
+    {
+        MotionInArea motion_in_area = 20;
+        LineCrossing line_crossing = 21;
+        Loitering loitering = 22;
+    }
+}
+
+// Additional info about finished search.
+enum ESearchCompletionCode
+{
+    ESearchCompletionCode_UNSPECIFIED = 0;
+    Ok = 1;
+    GeneralError = 2;
+    ResourceExhousted = 3;
+    Timeout = 4;
+};
+
+message SearchTracksResponse
+{
+    // Empty results are sent periodicly for keeping session alive
+    repeated Interval results = 1;
+    
+    // Last packet of search response sets
+    // next page token if db may contains more results.
+    string next_page_token = 2;
+
+    // Server side search execution info.
+    // Usually available with the last packet of
+    // response stream.
+    ESearchCompletionCode completion_code = 4;
+}
+
+service VMDAService
+{
+    // Performs search in VMDA database. 
+    // Query can take quite a time, so server is going to send empty packets periodically,
+    // to signal that search session is alive.
+    // After results are ready, server is going to send one or more search requests 
+    rpc SearchTracks(SearchTracksRequest) returns(stream SearchTracksResponse) {
+        option(google.api.http) = {
+            post: "/v1/vmda2/tracks:search",
+            body: "*"
+        };
+    };
+
+    rpc SearchTracksMulti(stream SearchTracksRequest) returns(stream SearchTracksResponse) {
+        option(google.api.http) = {
+            get: "/v1/vmda2/tracksMulti:search",
+        };
+    };
+}
+

@@ -1,0 +1,11 @@
+{
+  "name": "weather-dashboard-003",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Python-based weather dashboard wrapper (runs app.py via npm scripts)",
+  "scripts": {
+    "start": "python app.py",
+    "dev": "python app.py",
+    "run": "python app.py"
+  }
+}

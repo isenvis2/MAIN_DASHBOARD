@@ -1,0 +1,61 @@
+# === 의존성 ===
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# === 환경 변수 / 비밀 정보 (CLAUDE.md 3장) ===
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# === 빌드 산출물 ===
+dist/
+dist-ssr/
+build/
+coverage/
+*.local
+
+# === 로그 ===
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+shared/logs/
+apps/hls_converter/converter/logs/
+
+# === 캐시 / 런타임 산출물 ===
+apps/weather_dashboard/cache/*
+!apps/weather_dashboard/cache/.gitkeep
+apps/sms_dashboard/server/data/*.json
+
+# === HLS 변환 산출물 (CLAUDE.md 9장: 배포 ZIP 제외 대상과 동일) ===
+shared/media/**/*.m3u8
+shared/media/**/*.m4s
+shared/media/**/*.mp4
+shared/media/**/ffmpeg_progress.txt
+!shared/media/**/.gitkeep
+
+# === 에디터 / OS ===
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# === 임시 파일 ===
+*.tmp
+*.temp
+tmp/
+temp/

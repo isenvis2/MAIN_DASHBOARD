@@ -1,0 +1,9 @@
+{
+  "forecast": {
+    "start_offset_hours": 24,
+    "interval_hours": 24,
+    "horizon_hours": 24
+  },
+  "scroll_pause_seconds": 5,
+  "stop_posi": 0
+}

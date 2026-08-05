@@ -1,0 +1,249 @@
+syntax = "proto3";
+package axxonsoft.bl.auth;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/auth";
+
+import "google/api/annotations.proto";
+import "google/protobuf/duration.proto";
+
+
+message AuthenticateRequest
+{
+    string user_name = 1;
+    string password = 2;
+}
+
+enum ETFAType 
+{
+    NOT_ENABLED = 0;
+    GOOGLE_AUTHENTICATOR  = 1;
+}
+
+message AuthBySecondFactorInfo
+{
+    // indicates type of Two Factor Authentication
+    ETFAType type = 1;
+
+    // id of session which is prepared for certain user and will be given in case of successful confirmation
+    string session_id = 2;
+
+    // provided time for next step of authentication
+    string session_expires_at = 3;
+}
+
+message CredentialTraits
+{	
+    // Password must be changed since it doesn't satisfy security policy.
+    bool password_must_be_changed = 1;
+	
+	// Password expires in specified time span.
+    google.protobuf.Duration password_expires_in = 2;
+	
+    // Warning that password expires soon.
+    bool password_expires_soon = 3;
+}
+
+message AuthenticateResponse
+{
+    // token name to specify as request metadata authentication
+    string token_name = 1;
+
+    // token value for request metadata auth
+    string token_value = 2;
+    
+    // ISO 8601 string with date toe
+    // Token is good due this date.
+    // Client have to obtain fresh token before token expiration.
+    string expires_at = 3;
+
+    //contains all infromation relating to authentication by second factor
+    AuthBySecondFactorInfo auth_second_factor_info = 4;
+
+    // Time in seconds before token expiration
+    int64 expires_in = 5;
+
+    // Reference Information
+    // The following fields are not required for authenticating request.
+
+    // Indicates whether current user relates to admins or not
+    bool is_unrestricted = 10;
+
+    // Current user id
+    string user_id = 16;
+
+    // Active roles IDs
+    repeated string roles_ids = 17;
+    CredentialTraits credential_traits = 18;
+}
+
+message AuthenticateResponseEx
+{
+    // token name to specify as request metadata authentication
+    string token_name = 1;
+
+    // token value for request metadata auth
+    string token_value = 2;
+    
+    // ISO 8601 string with date toe
+    // Token is good due this date.
+    // Client have to obtain fresh token before token expiration.
+    string expires_at = 3;
+
+    //contains all infromation relating to authentication by second factor
+    AuthBySecondFactorInfo auth_second_factor_info = 4;
+
+    // Time in seconds before token expiration
+    int64 expires_in = 5;
+
+    // Reference Information
+    // The following fields are not required for authenticating request.
+
+    // Indicates whether current user relates to admins or not
+    bool is_unrestricted = 10;
+
+    // Current user id
+    string user_id = 16;
+
+    // Active roles IDs 
+    repeated string roles_ids = 17;
+    CredentialTraits credential_traits = 18;
+  
+    enum EAuthenticateCode
+    {
+        AUTHENTICATE_CODE_OK = 0;
+        AUTHENTICATE_CODE_GENERAL_ERROR = 1;
+        AUTHENTICATE_CODE_WRONG_CREDENTIALS = 2;
+        AUTHENTICATE_CODE_USER_LOCKED = 4;
+        AUTHENTICATE_CODE_IP_BLOCKED = 5;
+        AUTHENTICATE_CODE_ALREADY_LOGGED = 6;
+        AUTHENTICATE_CODE_PASSWORD_INVALID = 8;
+        AUTHENTICATE_CODE_WRONG_SUPERVISOR_ROLE = 10;
+        AUTHENTICATE_CODE_TIMEZONE_DENIED  = 11;
+
+        AUTHENTICATE_CODE_SECOND_FACTOR_AUTH_NEEDED = 12;
+
+        AUTHENTICATE_CODE_TFA_WRONG_CODE = 20;
+        AUTHENTICATE_CODE_TFA_NOT_ENABLED = 21;
+        AUTHENTICATE_CODE_TFA_TYPE_MISMATCH = 22;
+        AUTHENTICATE_CODE_TFA_TYPE_UNSUPPORTED = 23;
+        AUTHENTICATE_CODE_TFA_ATTEMPT_LIMIT_EXCEEDED = 24;
+        AUTHENTICATE_CODE_TFA_TIME_EXCEEDED = 25;
+
+		reserved 3, 7, 9;
+    }
+
+    EAuthenticateCode error_code = 20;
+}
+
+message AuthenticateBySecondFactorRequest
+{
+    string session_id = 1;
+    string verification_code  = 2;
+}
+
+message AuthenticateTokenRequest
+{
+    string jwt_token = 1;
+}
+
+message RenewSessionRequest
+{
+}
+
+message CloseSessionRequest
+{
+}
+
+message CloseSessionResponse
+{
+    enum EErrorCode
+    {
+        OK = 0;
+        GENERAL_ERROR = 1;
+        IP_BLOCKED  = 20;
+    }
+    EErrorCode error_code = 15;
+}
+
+service AuthenticationService
+{
+    // Deprecated. Use Authenticate2 request instead.
+    rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {
+        option deprecated = true;
+        option (google.api.http) = {
+            get: "/v1/authentication/authenticate"
+        };
+    }
+
+    rpc Authenticate2(AuthenticateRequest) returns (AuthenticateResponse) {
+        option (google.api.http) = {
+            post: "/v1/authentication/authenticate2"
+            body: "*"
+        };
+    }
+
+    // noexcept. Instead of exception AuthenticateEx returns error code.
+    // Deprecated. Use AuthenticateEx2 request instead.
+    rpc AuthenticateEx(AuthenticateRequest) returns (AuthenticateResponseEx) {
+        option deprecated = true;
+        option (google.api.http) = {
+            get: "/v1/authentication/authenticate_ex"
+        };
+    }
+
+    // noexcept. Instead of exception AuthenticateEx2 returns error code.
+    rpc AuthenticateEx2(AuthenticateRequest) returns (AuthenticateResponseEx) {
+        option (google.api.http) = {
+            post: "/v1/authentication/authenticate_ex2"
+            body: "*"
+        };
+    }
+
+    rpc AuthenticateBySecondFactor (AuthenticateBySecondFactorRequest) returns (AuthenticateResponseEx);
+
+    rpc AuthenticateWithPublicKey(AuthenticateTokenRequest) returns (AuthenticateResponseEx);
+
+    // Refresh user session token (auth token)
+    //
+    // Issue a new session token (auth token) based on the current session.
+    // Session token has to be renewed regularly to:
+    //
+    //   * keep authentication valid, i.e. make sure session does not expire, and
+    //   * get an up-to-date set of effective roles and access privileges.
+    //
+    // The new token will contain new expiry time and reflect any changes to
+    // user account that happened since the current token has been issued.
+    //
+    // To be renewed, current session has to be valid: issued by one of the
+    // nodes in the domain, and not expired. RenewSession() can be called on any
+    // node in the domain regardless of where session has been issued
+    // originally.
+    //
+    // Compatibility note
+    // ------------------
+    // Previously RenewSession() would fail if token issuer node wasn't
+    // available, which made RenewSession() somewhat unreliable.
+    //
+    // RenewSession2() has been introduced to indicate that server supports
+    // reliable auth token renewal, but the current underlying implementation is
+    // identical with RenewSession().
+    rpc RenewSession(RenewSessionRequest) returns (AuthenticateResponseEx) {
+        option deprecated = true;
+        option (google.api.http) = {
+            get: "/v1/authentication/renew"
+        };
+    }
+
+    rpc RenewSession2(RenewSessionRequest) returns (AuthenticateResponseEx) {
+        option (google.api.http) = {
+            get: "/v1/authentication/renew2"
+        };
+    }
+
+    rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse) {
+        option (google.api.http) = {
+            get: "/v1/authentication/close"
+        };
+    }
+}
+

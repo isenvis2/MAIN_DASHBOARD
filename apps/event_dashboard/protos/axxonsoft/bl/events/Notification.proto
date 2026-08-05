@@ -1,0 +1,185 @@
+syntax = "proto3";
+package axxonsoft.bl.events;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/events";
+
+import "google/protobuf/any.proto";
+import "google/api/annotations.proto";
+
+import "axxonsoft/bl/security/EventPermissions.proto";
+import "axxonsoft/bl/events/Events.proto";
+
+message Localization
+{
+    string text = 1;
+}
+
+message EventFilter
+{
+    // Specifies required event type
+    // Must be specified.
+    EEventType event_type = 1;
+    // Associated object service name, binding or association
+    string subject = 2;
+    // The field indicates that client requires events from all nodes in domain.
+    // When it is setup, 'subject' field will be ignored.
+    bool domain_wide = 4;
+    bool current_node_events_only = 3;
+}
+
+message Details
+{
+    message OrdinaryEvent {
+    }
+
+    oneof subtype {
+        OrdinaryEvent       ordinary = 1;
+        CacheableEvent      cacheable = 2;
+        WithdrawCachedEvent withdraw = 4;
+    }
+
+    reserved 3;
+    reserved "renew";
+}
+
+message Event
+{
+    EEventType event_type = 1;
+    string subject = 2; // TODO: remove deprecated functionality
+
+    // Full qualified event name contained in 'body'.
+    string event_name = 20;
+
+    // TODO: is it better to use generic event type with key-value fields instead of any
+    google.protobuf.Any body = 3;
+
+    repeated string subjects = 4;
+	
+    // Shows whether event originates
+    // from outer or current node.
+    bool external = 5;
+    Localization localization = 11;
+	
+    security.EventPermissions required_permissions = 12;
+
+    // Only for PullDetailedEvents method
+    Details details = 15;
+}
+
+message Events
+{
+    repeated Event items = 1;
+}
+
+message CacheableEvent
+{
+    string tag = 1;
+    bool is_retransmit = 2;
+    bool is_transient = 3;
+    string id = 4;
+}
+
+message RenewCachedEvent
+{
+    string tag = 1 ;
+    bool is_transient = 2;
+    string id = 3;
+    Event original = 4;
+}
+
+message WithdrawCachedEvent
+{
+    string tag = 1 ;
+    string id = 2;
+}
+
+message EventFilters
+{
+    //  Initial filters list.
+    repeated EventFilter include = 1;
+
+    repeated EventFilter exclude = 2;
+}
+
+message PullEventsRequest
+{
+    // Unique id provided by client. Using this id 
+    // client can adjust events filter list on-the-fly.
+    string subscription_id = 1;
+
+    //  Initial filters list.
+    EventFilters filters = 2;
+}
+
+message UpdateSubscriptionRequest
+{
+    // Id of event stream
+    string subscription_id = 1;
+
+    //  New filters list.
+    EventFilters filters = 2;
+}
+
+message DisconnectEventChannelRequest
+{
+    // Id of event stream
+    string subscription_id = 1;
+}
+
+// TODO: consult design guide. Should we use empty type instead of this
+message UpdateSubscriptionResponse
+{
+}
+
+message DisconnectEventChannelResponse
+{
+}
+
+message PushDiagnosticEventsRequest
+{
+    repeated DiagnosticAlertEvent alerts = 1;
+    repeated DiagnosticActionEvent actions = 2;
+}
+
+message PushDiagnosticEventsResponse
+{
+}
+
+service DomainNotifier
+{
+    rpc PullEvents(PullEventsRequest) returns (stream Events) {
+        option (google.api.http) = {
+            post: "/v1/notifier/subscriptions"
+            body: "*"
+        };
+    }
+
+    // Pull events.
+    // NOTES:
+    // - All `RenewCachedEvent` events are filtered out (never sent).
+    rpc PullDetailedEvents(PullEventsRequest) returns (stream Events) {
+        option (google.api.http) = {
+            post: "/v1/notifier/subscriptions:pull"
+            body: "*"
+        };
+    }
+
+    rpc UpdateSubscription(UpdateSubscriptionRequest) returns (UpdateSubscriptionResponse) {
+        option (google.api.http) = {
+            post: "/v1/notifier/subscriptions:update"
+            body: "*"
+        };
+    }
+
+    rpc DisconnectEventChannel(DisconnectEventChannelRequest) returns (DisconnectEventChannelResponse) {
+        option (google.api.http) = {
+            post: "/v1/notifier/subscriptions:disconnect"
+            body: "*"
+        };
+    }
+    
+    rpc PushDiagnosticEvents(PushDiagnosticEventsRequest) returns (PushDiagnosticEventsResponse);
+    
+    //TODO: do we need ping and remove subscription?
+    //TODO: test with slow client and bad network.
+}

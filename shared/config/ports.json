@@ -1,0 +1,13 @@
+{
+  "main_dashboard": 8090,
+  "weather_dashboard": 8100,
+  "sms_preview": 5174,
+  "news_frontend": 5173,
+  "news_backend": 8000,
+  "hls_api": 8080,
+  "hls_media": 8080,
+  "sms_frontend": 3000,
+  "sms_backend": 3005,
+  "event_dashboard": 3100,
+  "report_dashboard": 3200
+}

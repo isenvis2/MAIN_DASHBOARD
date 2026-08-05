@@ -1,0 +1,58 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+// Additional characteristic of a property.
+message PropertyAttribute {
+    // Specific attribute.
+    oneof attribute {
+        // Property is a file path.
+        FilePathPropertyAttribute file_path = 1;
+
+        // Property is a directory path.
+        DirectoryPathPropertyAttribute directory_path = 2;
+
+        // Property is a extern enumeration.
+        ExternEnumerationPropertyAttribute extern_enumeration = 3;
+		
+        // A device property.
+        DevicePropertyAttribute device_property = 4;
+
+        // A secret property.
+        SecretPropertyAttribute secret = 5;
+
+        // A cipher key property.
+        CipherKeyPropertyAttribute cipher_key = 8;
+    }
+}
+
+// Indicates that a property stores a value that refers to a file path. 
+message FilePathPropertyAttribute {
+}
+
+// Indicates that a property stores a value that refers to a directory path.
+message DirectoryPathPropertyAttribute {
+}
+
+// Indicates that a property has extern description of its enumeration constrains.
+message ExternEnumerationPropertyAttribute {
+    string name = 1;
+}
+
+// Indicates that a property relates to a device.
+message DevicePropertyAttribute {
+}
+
+// Indicates that property should be kept in secret. The returned value is not the actual one
+message SecretPropertyAttribute {
+}
+
+// Indicates that a property is cipher info.
+message CipherKeyPropertyAttribute {
+    // Exact key size for cipher.
+    int32 size_bytes = 1;
+
+    // Algorithm name for cipher, for example  "AES-256-GCM".
+    string algorithm_name = 2;
+}

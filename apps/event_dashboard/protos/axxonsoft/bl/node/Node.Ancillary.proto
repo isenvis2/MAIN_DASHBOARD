@@ -1,0 +1,28 @@
+syntax = "proto3";
+package axxonsoft.bl.node.internal;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/node/internal";
+
+message SceneDescription
+{
+    string access_point = 1;
+    string camera_access_point = 2;
+    uint32 scene_description_class = 3;
+}
+
+message ListSceneDescriptionRequest
+{
+    string page_token = 1;
+    int32 page_size = 2; 
+}
+
+message ListSceneDescriptionResponse
+{
+    repeated SceneDescription scene_descriptions = 1;
+    string next_page_token = 2;
+}
+
+service NgpNodeService
+{
+    rpc ListSceneDescription(ListSceneDescriptionRequest) returns (ListSceneDescriptionResponse);
+}

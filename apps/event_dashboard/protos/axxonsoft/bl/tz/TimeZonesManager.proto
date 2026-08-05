@@ -1,0 +1,161 @@
+syntax = "proto3";
+package axxonsoft.bl.tz;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/tz";
+
+import "google/api/annotations.proto";
+
+message TZStartPoint
+{
+    int32 year = 1;        // 2000-2100, -1=unset
+    int32 month = 2;       // 1-12, -1=unset
+    int32 day_of_month = 3;// 1-31, -1=unset
+    int32 day_of_week = 4; // 1-7, -1=unset
+    int32 hour = 5;        // 0-23, -1=unset
+    int32 minute = 6;      // 0-59, -1=unset
+    int32 second = 7;      // 0-59, -1=unset
+    int32 millisecond = 8; // 0-999, -1=unset
+}
+
+message TZInterval
+{
+    // GUID formated like: "b9cdc301-19de-f14b-9580-b674a467ea36"
+    string id = 1;
+    TZStartPoint start = 2;
+    uint32 length_seconds = 3;
+    uint32 period_seconds = 4;
+}
+
+message TimeZone
+{
+    // GUID formated like: "b9cdc301-19de-f14b-9580-b674a467ea36"
+    string id = 1;
+    string name = 2;
+    repeated TZInterval intervals = 3;
+}
+
+message ListTimeZonesRequest
+{
+    enum EViewMode
+    {
+        // Server response includes only basic TZ info,
+        // with no timezone intevals
+        VIEW_MODE_STRIPPED = 0;
+    
+        // Full representation with intervals include
+        VIEW_MODE_FULL = 1;
+    }
+    EViewMode view = 1;
+}
+
+message ListTimeZonesResponse
+{
+    repeated TimeZone items = 1;
+}
+
+message BatchGetTimeZonesRequest
+{
+    repeated string zone_ids = 1;
+}
+
+message BatchGetTimeZonesResponse
+{
+    repeated TimeZone items = 1;
+    repeated string not_found_zones = 2;
+}
+
+message ChangeTimeZonesRequest
+{
+    // Specify removed time zone id's.
+    // Removing TZ removes all enclosed intervals
+    repeated string removed_zones = 1;
+
+    // Remove interval by id.
+    repeated string removed_intervals = 2;
+
+    // Updating only time zone info.
+    // Warning: Enclosed intervals will be ignored.
+    // To modify intervals use modified_intervals field.
+    repeated TimeZone modified_zones = 3;
+
+    // Updated interval info.
+    repeated TZInterval modified_intervals = 4;
+
+    // Adding new TimeZones
+    repeated TimeZone added_zones = 5;
+
+    message NewIntervalEntry
+    {
+        // parent time zone id
+        string timezone_id = 1;
+        // added interval
+        TZInterval value = 2;
+    }
+
+    // Adding interval to id
+    repeated NewIntervalEntry added_intervals = 6;
+}
+
+message ChangeTimeZonesResponse
+{
+
+}
+
+message ListNTPRequest
+{
+}
+
+message NTP
+{
+	string ntp_url = 1;
+	bool sync_ip_devices = 2;
+}
+
+message ListNTPResponse
+{
+    NTP ntp = 1;
+}
+
+message SetNTPRequest
+{
+    NTP ntp = 1;
+}
+
+message SetNTPResponse
+{
+}
+
+service TimeZoneManager
+{
+    rpc ListTimeZones(ListTimeZonesRequest) returns (ListTimeZonesResponse) {
+        option (google.api.http) = {
+            get: "/v1/time_zones"
+        };
+    }
+
+    rpc BatchGetZones(BatchGetTimeZonesRequest) returns (BatchGetTimeZonesResponse) {
+        option (google.api.http) = {
+            get: "/v1/time_zones:batchGet"
+        };
+    }
+
+    rpc ChangeTimeZones(ChangeTimeZonesRequest) returns (ChangeTimeZonesResponse) {
+        option (google.api.http) = {
+            post: "/v1/time_zones:change"
+            body: "*"
+        };
+    }
+	
+    rpc GetNTP (ListNTPRequest) returns (ListNTPResponse) {
+        option (google.api.http) = {
+            get: "/v1/time_sync/ntp_server"
+        };
+    }
+
+    rpc SetNTP (SetNTPRequest) returns (SetNTPResponse) {
+        option (google.api.http) = {
+            post: "/v1/time_sync/ntp_server:update"
+            body: "*"
+        };
+    }
+}

@@ -1,0 +1,117 @@
+syntax = "proto3";
+package axxonsoft.bl.maintenance;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/maintenance";
+
+import "google/api/annotations.proto";
+
+
+enum EConfigType
+{
+    LOCAL_CONFIG = 0;
+    SHARED_CONFIG = 1;
+}
+
+message Revision
+{
+    int32 number = 1;
+    string hash = 2;
+}
+
+message GetRevisionInfoRequest
+{
+    EConfigType type = 1;
+    repeated string nodes = 2;
+    Revision from = 3;
+    Revision to = 4;
+}
+
+message GetRevisionInfoResponse
+{
+    message Info
+    {
+        Revision revision = 1;
+        string timestamp = 2;
+        bool is_current = 3;
+        string tags = 4;
+        repeated Revision parents = 5;
+        string comment = 6;
+    }
+    message InfoList
+    {
+        repeated Info info = 1;
+    }
+    map<string, InfoList> info = 1;
+}
+
+message SetRevisionRequest
+{
+    EConfigType type = 1;
+    string node = 2;
+    Revision revision = 3;
+    string comment = 4;
+}
+
+message SetRevisionResponse
+{
+}
+
+message CollectBackupRequest
+{
+    enum EBackupType
+    {
+        LOCAL = 0;
+        SHARED = 1;
+        LICENSE = 2;
+        TICKETS = 3;
+    }
+
+    repeated EBackupType type = 1;
+    string node = 2;
+    uint64 chunk_size_kb = 3;
+}
+
+message CollectBackupResponse
+{
+    uint64 total_size_bytes = 1;
+    uint64 chunk_index = 2;
+    bytes chunk_data = 3;
+}
+
+message RestoreBackupRequest
+{
+    enum ERestoreType
+    {
+        LOCAL = 0;
+        CLEAN_LOCAL = 1;
+        SHARED = 2;
+        CLEAN_SHARED = 3;
+        LICENSE = 4;
+        TICKETS = 5;
+    }
+    message InitialData
+    {
+        repeated ERestoreType type = 1;
+        string node = 2;
+        uint64 total_size_bytes = 3;
+    }
+
+    oneof data
+    {
+        InitialData initial_data = 1;
+        bytes chunk_data = 2;
+    }
+}
+
+message RestoreBackupResponse
+{
+}
+
+service ConfigurationManager
+{
+    rpc GetRevisionInfo (GetRevisionInfoRequest) returns (GetRevisionInfoResponse);
+    rpc SetRevision (SetRevisionRequest) returns (SetRevisionResponse);
+    rpc CollectBackup (CollectBackupRequest) returns (stream CollectBackupResponse);
+    rpc RestoreBackup (stream RestoreBackupRequest) returns (RestoreBackupResponse);
+}
+

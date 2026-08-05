@@ -1,0 +1,28 @@
+syntax = "proto3";
+package axxonsoft.bl.realtimerecognizer;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/realtimerecognizer";
+
+import "axxonsoft/bl/realtimeRecognizer/RealtimeRecognizer.proto";
+
+message GetDataRequest
+{
+    string access_point = 1;
+    string list_id = 2;
+    string item_id = 3;
+}
+
+message GetDataResponse
+{
+    DataType type = 1;
+    oneof data
+    {
+        string data_string = 11; // expects for LPR
+        bytes data_image = 12;
+    }
+}
+
+service RealtimeRecognizerExternalService
+{
+    rpc GetData(GetDataRequest) returns (GetDataResponse);
+}

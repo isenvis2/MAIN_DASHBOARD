@@ -1,0 +1,112 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+
+enum EDeviceCategory
+{
+    DEVICE_CATEGORY_UNSPECIFIED = 0;
+    IP_DEVICE               = 1;
+    IP_DEVICE_WITH_STORAGE  = 2;
+    TEXT_EVENT_DEVICE       = 3;
+    ACFA_DEVICE             = 4;
+}
+
+message ModelCredentials
+{
+    string login = 1;
+    string password = 2;
+}
+
+message ModelTraits
+{
+    // NOTE: omitted for generic devices
+    bool has_storage = 1;
+    bool has_text_event_sources = 2;
+    bool has_motion_detection = 3;
+
+    ModelCredentials default_credentials = 4;
+    google.protobuf.UInt32Value default_port = 5;
+
+    // Not all devices have channels. In this case it will be zero
+    int32 video_channels_count = 6;
+}
+
+message Device
+{
+    string vendor = 1;
+    string model = 2;
+    repeated string firmware = 3;
+    repeated EDeviceCategory categories = 4;
+
+    ModelTraits traits = 5;
+}
+
+message ListVendorsRequest
+{
+    // Filters vendors by category. Optional.
+    EDeviceCategory category = 1;
+    string filter = 2;
+    int32 page_size = 14;
+    string page_token = 15;
+}
+
+message ListVendorsResponse
+{
+    repeated string vendors = 1;
+    string next_page_token = 15;
+}
+
+message ListDevicesRequest
+{
+    // Filters devices by category. Optional.
+    EDeviceCategory category = 1;
+    // Filters devices by vendor. Optional.
+    string vendor = 2;
+    string filter = 3;
+    int32 page_size = 14;
+    string page_token = 15;
+}
+
+message ListDevicesResponse
+{
+    repeated Device devices = 1;
+    string next_page_token = 15;
+}
+
+message GetDeviceRequest
+{
+    string vendor = 1;
+    string model = 2;
+}
+
+message GetDeviceResponse
+{
+    Device device = 1;
+}
+
+service DevicesCatalog
+{
+    rpc ListVendors(ListVendorsRequest) returns (ListVendorsResponse) {
+        option (google.api.http) = {
+            get: "/v1/configurator/devices_catalog/vendors"
+        };
+    }
+    // Server-stream version of the previous method.
+    rpc ListVendorsV2(ListVendorsRequest) returns (stream ListVendorsResponse);
+    rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {
+        option (google.api.http) = {
+            get: "/v1/configurator/devices_catalog/devices"
+        };
+    }
+    // Server-stream version of the previous method.
+    rpc ListDevicesV2(ListDevicesRequest) returns (stream ListDevicesResponse);
+    rpc GetDevice(GetDeviceRequest) returns (GetDeviceResponse) {
+        option (google.api.http) = {
+            get: "/v1/configurator/devices_catalog/device"
+        };
+    }
+}

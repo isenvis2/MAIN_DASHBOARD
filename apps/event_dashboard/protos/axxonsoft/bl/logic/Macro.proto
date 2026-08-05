@@ -1,0 +1,684 @@
+syntax = "proto3";
+package axxonsoft.bl.logic;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/logic";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+
+import "axxonsoft/bl/events/Events.proto";
+import "axxonsoft/bl/config/Property.proto";
+import "axxonsoft/bl/license/LicenseService.proto";
+
+message MacroModeCommon
+{
+}
+
+message MacroModeTimeZone
+{
+    // guid of timezone
+    string timezone_id = 1;
+}
+
+message MacroModeAutorule
+{
+    // camera access point
+    string zone_ap = 1;
+    bool only_if_armed = 2;
+    // guid of timezone
+    string timezone_id = 3;
+}
+
+message MacroModeContinuous
+{
+    // TODO: ????
+    string server = 1;
+    // guid of timezone
+    string timezone_id = 2;
+    // milliseconds
+    int32 heartbeat_ms = 3;
+    // randomized
+    bool random = 4;
+}
+
+message MacroMode
+{
+    bool enabled = 1;
+    string user_role = 2;
+    bool is_add_to_menu = 3;
+    oneof type
+    {
+        MacroModeCommon common = 4;
+        MacroModeTimeZone time_zone = 5;
+        MacroModeAutorule autorule = 6;
+        MacroModeContinuous continuous = 7;
+    }
+}
+
+message SpecialFilter
+{
+    message Range
+    {
+        double lower = 1;
+        double upper = 2;
+    }
+
+    string key = 1;
+    oneof value
+    {
+        double double_value = 4;
+        string string_value = 5;
+        Range range_value = 6;
+    }
+}
+
+message DetectorMacroCondition
+{
+    string event_type = 1;
+    string source_ap = 2;
+
+    events.DetectorEvent.AlertState state = 3;
+    repeated SpecialFilter details = 4;
+}
+
+message TimeZoneMacroCondition
+{
+    string timezone_id = 1;
+
+    enum ETimezonesBoundary
+    {
+        TB_BEGINING = 0;
+        TB_ENDING = 1;
+    }
+    ETimezonesBoundary boundary_case = 2;
+}
+
+message AlertMacroCondition
+{
+    string zone_ap = 1;
+
+    enum EAlertCase
+    {
+        AC_ALERT_UNKNOWN = 0x0;
+        AC_ALERT_RAISED = 0x1;
+        AC_ALERT_TAKEN = 0x2;
+        AC_ALERT_CLOSED = 0x4;
+        AC_ALERT_MISSED = 0x8;
+        AC_ALERT_HARMLESS = 0x10;
+        AC_ALERT_SUSPICIOUS = 0x20;
+        AC_ALERT_DANGEROUS = 0x40;
+    };
+
+    EAlertCase alert_case = 2;
+}
+
+message DeviceStateMacroCondition
+{
+    string device = 1;
+    events.IpDeviceStateChangedEvent.State state = 2;
+    int32 threshold = 3;
+}
+
+message WriteArchiveMacroCondition
+{
+    string camera = 1;
+    events.StateControlStateChangeEvent.SCSwitch state = 2;
+}
+
+message PtzMacroCondition
+{
+    string camera = 1;
+    events.PTZEvent.Reason reason = 2;
+    int32 preset = 3;
+}
+
+message RelayMacroCondition
+{
+    string relay = 1;
+    events.StateControlStateChangeEvent.SCSwitch state = 2;
+}
+
+message AuditMacroCondition
+{
+    events.AuditEvent.EAuditEventType event = 1;
+    map<string, string> data = 2;
+}
+
+message VolumeHealthMacroCondition
+{
+    string storage = 1;
+    string volume = 2;
+    events.VolumeHealthEvent.State health = 3;
+}
+
+message TextEventCondition
+{
+    string source = 1;
+    string text = 2;
+}
+
+message ServerStateMacroCondition
+{
+    string observer = 1;
+    string subject = 2;
+
+    enum ServerState
+    {
+        SS_OFFLINE = 0;
+        SS_ONLINE = 1;
+    };
+    ServerState state = 3;
+}
+
+message ArmStateCondition
+{
+    string zone = 1;
+    events.CameraArmStateEvent.ECameraArmState state = 2;
+}
+
+message RecognitionMacroCondition
+{
+    enum DetectionType
+    {
+      DT_Face = 0;
+      DT_Plate = 1;
+    };
+    string camera = 1;
+    string list = 2; // GUID in format 3303abb2-181e-4e83-8987-8a06c309a741
+    DetectionType type = 3;
+    repeated string objects = 4; // array of GUIDs
+    bool presence = 5;
+}
+
+message StatisticsCondition
+{
+    enum Trend
+    {
+        ET_NONE = 0;
+        ET_RISING = 1;
+        ET_FALLING = 2;
+        ET_LEAVING = 3;
+    };
+    string point = 1;
+    string item = 2;
+    double value = 3;
+    double delta = 4;
+    Trend trend = 5;
+}
+
+message LicenseServerCondition
+{
+    string node = 1;
+    license.LicenseServiceStatus status = 2;
+}
+
+message AcfaMacroCondition
+{
+    enum EEventPhase
+    {
+        MOMENTARY = 0;
+        BEGAN = 1;
+        ENDED = 2;
+        TECHNICAL = 3;
+        PERIODICAL = 4;
+    }
+
+    message State
+    {
+        enum EStateType
+        {
+            ST_NORMAL = 0;
+            ST_WARNING = 1;
+            ST_ALARM = 2;
+            ST_FAILURE = 3;
+        }
+
+        string id = 1;
+        EStateType type = 2;
+    }
+
+    message Event
+    {
+        string id = 1;
+        repeated SpecialFilter details = 2;
+    }
+
+    // acfa unit access_point
+    string object = 1;
+    EEventPhase phase = 2;
+
+    oneof data
+    {
+        Event event = 3;
+        State state = 4;
+    }
+}
+
+message MacroCondition
+{
+    string path = 1;
+    oneof condition
+    {
+        DetectorMacroCondition detector = 4;
+        TimeZoneMacroCondition timezone = 5;
+        AlertMacroCondition alert = 6;
+        DeviceStateMacroCondition device = 7;
+        WriteArchiveMacroCondition archive_write = 8;
+        PtzMacroCondition ptz = 9;
+        RelayMacroCondition relay = 10;
+        VolumeHealthMacroCondition volume_health = 11;
+        ServerStateMacroCondition server_state = 12;
+        TextEventCondition text = 13;
+        ArmStateCondition arm = 14;
+        RecognitionMacroCondition recognition = 15;
+        StatisticsCondition statistics = 16;
+        AuditMacroCondition audit = 17;
+        LicenseServerCondition license = 18;
+        AcfaMacroCondition acfa = 19;
+    }
+}
+
+message WriteArchiveAction
+{
+    string camera = 1;
+    string archive = 2;
+    int32 min_prerecord_ms = 3;
+    int32 post_event_timeout_ms = 4;
+    float fps = 5;
+}
+
+message MandatoryComment
+{
+    bool confirmed_alarm = 1;
+    bool suspicious_situation = 2;
+    bool false_alarm = 3;
+}
+
+message RaiseAlertAction
+{
+    enum RaiseAlertMode
+    {
+      RAM_Always = 0;
+      RAM_AlwaysIfArmed = 1;
+      RAM_AlwaysIfNoActiveAlert = 2;
+      RAM_IfArmedAndNoActiveAlert = 3;
+    };
+
+    string zone = 1;
+    string archive = 2;
+    int32 offset_ms = 3;
+    RaiseAlertMode mode = 4;
+    map<int32, string> reactions = 5; // key - AlertMacroCondition.EAlertCase, value - macro guid
+    
+    events.EAlertPriority priority = 10;
+    repeated string user_roles = 11;
+    int32 pending_max_time_seconds = 12;
+    MandatoryComment required_comment = 13;
+};
+
+message CloseAlertAction
+{
+    enum Resolution
+    {
+      // numbers should be map to ORM::AlertSeverity
+      AR_None = 0;
+      AR_False = 1;
+      AR_Warning = 3;
+      AR_Alarm = 4;
+    };
+
+    string zone = 1;
+    Resolution resolution = 2;
+    bool close_locked = 3;
+};
+
+message SwitchRelayAction
+{
+    enum SwitchDirective
+    {
+        SD_NEUTRAL = 0;
+        SD_OFF = 1;
+        SD_ON = 2;
+    };
+
+    string relay = 1;
+    SwitchDirective effect = 2;
+}
+
+message GotoPTZPresetAction
+{
+    string telemetry = 1;
+    int32 preset_number = 2;
+    double speed = 3;
+    int32 priority = 10;
+    int32 keep_time = 11; // time_duration seconds
+}
+
+message VoiceNotificationAction
+{
+    string notifier = 1;
+    int32 timeout_ms = 2;
+}
+
+message SinkAudioNotificationAction
+{
+    string state_control = 1;
+    string source_endpoint = 2;
+    string sink_endpoint = 3;
+    int32 timeout_ms = 4;
+}
+
+
+message EmainNotificationAction
+{
+    string notifier = 1;
+    repeated string recipients = 2;
+    string subject = 3;
+    string msg_text = 4;
+    bool atach_video = 5;
+    string export_agent = 6;
+    int32 span_ms = 7;
+    int32 offset_ms = 10;
+    string camera = 8;
+    string archive = 9;
+}
+
+message SendSMSAction
+{
+    string notifier = 1;
+    string recipient = 2;
+    string msg_text = 4;
+}
+
+message GuiAction
+{
+    string id = 1;
+    string data = 2;
+	string cancel_data = 3;
+}
+
+message WebQueryAction
+{
+    enum EQueryMethod
+    {
+        QM_POST = 0;
+        QM_GET = 1;
+        QM_PUT = 2;
+        QM_DELETE = 3;
+    };
+
+    enum EQueryProto
+    {
+        QP_HTTP = 0;
+        QP_HTTPS = 1;
+    };
+
+    enum EAuthMethod
+    {
+        AM_BASIC = 0;
+        AM_DIGEST = 1;
+    };
+
+    EQueryMethod method = 1;
+    EQueryProto proto = 2;
+    string Host = 3;
+    uint32 Port = 4;
+    string Path = 5;
+    string Body = 6;
+    string Login = 7;
+    string Password = 8;
+    EAuthMethod Auth = 9;
+}
+
+message ArmStateAction
+{
+    string zone = 1;
+    bool new_state = 2;
+}
+
+message MMExportAction
+{
+    string export_agent = 1;
+
+    enum ExportMode
+    {
+        EM_NONE = 0;
+        EM_TIMEZONE_FRAGMENT = 1;
+        EM_SPECIFIED_FRAGMENT = 2;
+        EM_SNAPSHOT = 3;
+        EM_RUNTIME_FRAGMENT = 4;
+    };
+
+    ExportMode mode = 2;
+    string timezone = 3;
+    int32 span_ms = 4;
+    int32 offset_ms = 5;
+    string camera = 6;
+    string archive = 7;
+    string filename_format = 8;
+    string comment_format = 9;
+    bool burn_subtitle = 10;
+}
+
+message SpecialAction
+{
+    string script = 1;
+    string server = 2;
+    string arguments = 3;
+}
+
+message ReplicationAction
+{
+    enum EMode
+    {
+        RM_TIMEZONE_FRAGMENT = 0;
+        RM_SPECIFIED_FRAGMENT = 1;
+        RM_RUNTIME_FRAGMENT = 2;
+        RM_BLIND_REPLICATION = 3;
+        RM_VALUED_FRAGMENT = 4;
+        RM_OFFLINE_FRAGMENT = 5;
+    };
+
+    EMode mode = 1;
+    string timezone_id = 2;
+    int32 span_ms = 3;
+    int32 offset_ms = 4;
+    string camera = 5;
+    string archive = 6;
+    // left shift of offline replica intervals' start time
+    google.protobuf.Int32Value prevention_ms = 7;
+}
+
+message ServiceStateAction
+{
+    string service = 1;
+    bool enable = 2;
+}
+
+message ConfigureAction
+{
+    string configurable = 1;
+    repeated config.Property properties = 2;
+}
+
+message InvokeMacroAction
+{
+    string macro = 1; // GUID in format 3303abb2-181e-4e83-8987-8a06c309a741
+}
+
+message GroupAction
+{
+    string group = 1; // GUID in format 3303abb2-181e-4e83-8987-8a06c309a741
+    bool random = 2;
+    oneof action {
+        WriteArchiveAction write_archive = 4;
+        RaiseAlertAction raise_alert = 5;
+        EmainNotificationAction email_notification = 6;
+        ArmStateAction arm_state = 7;
+        MMExportAction export = 8;
+        ReplicationAction replication = 9;
+        CloseAlertAction close_alert = 10;
+        PushEventAction push_event = 11;
+        ServiceStateAction service_state = 12;
+    }
+}
+
+message PushEventAction
+{
+    string title = 1;
+    string subtitle = 2;
+    string body = 3;
+    repeated string recipients = 4;
+    bool atach_video = 5;
+    string export_agent = 6;
+    int32 span_ms = 7;
+    int32 offset_ms = 10;
+    string camera = 8;
+    string archive = 9;
+}
+
+message AcfaPerformAction
+{
+    message Parameter
+    {
+        string id = 1;
+        oneof value
+        {
+            string string_value = 2;
+            double double_value = 3;
+        }
+    }
+
+    string object = 1; // Qualifyed acfa unit uid.
+    string action_id = 3;
+    repeated Parameter parameters = 4; // Additional parameters of action if needed
+
+    // Message 'axxonsoft.bl.acfa.PerformActionRequest' serialized into JSON string.
+    // Note: enum value case sensitive is required.
+    // Deprecated: use "action_id" and "parameters" to populate parameter values
+    string request = 2 [deprecated = true];
+}
+
+message CounterAction
+{
+    enum EOperation
+    {
+        START = 0;
+        STOP = 1;
+        CLEANUP = 3;
+        START_WITH_CLEANUP = 4;
+        STOPT_WITH_CLEANUP = 5;
+    };
+    string counter = 1;
+    EOperation operation = 2;
+}
+
+message Action
+{
+    oneof type {
+        WriteArchiveAction write_archive = 4;
+        SwitchRelayAction switch_relay = 5;
+        GotoPTZPresetAction goto_ptz = 6;
+        VoiceNotificationAction voice_notification = 7;
+        SinkAudioNotificationAction audio_notification = 8;
+        EmainNotificationAction email_notification = 9;
+        SendSMSAction send_sms = 10;
+        GuiAction gui = 11;
+        MMExportAction export = 12;
+        SpecialAction special = 13;
+        ReplicationAction replication = 14;
+        ServiceStateAction service_state = 15;
+        WebQueryAction web_query = 16;
+        RaiseAlertAction raise_alert = 17;
+        ArmStateAction arm_state = 18;
+        ConfigureAction configure = 19;
+        InvokeMacroAction macro = 20;
+        GroupAction group = 21;
+        CloseAlertAction close_alert = 22;
+        PushEventAction push_event = 23;
+        AcfaPerformAction acfa = 24;
+        CounterAction counter = 25;
+    }
+}
+
+message RecordCheck
+{
+    enum CheckType
+    {
+        CT_CHECK_RECORD = 0;
+        CT_CHECK_RECORD_SAFETY = 1;
+    };
+
+    string camera = 1;
+    string archive = 2;
+    int32 depth_ms = 3;
+    CheckType type = 4;
+}
+
+message ArmStateCheck
+{
+    string camera = 1;
+}
+
+message MacroCheckRule
+{
+    oneof type {
+        RecordCheck record = 4;
+        ArmStateCheck arming = 5;
+    }
+
+    map<int32, MacroRule> success_rules = 2;
+    map<int32, MacroRule> failure_rules = 3;
+}
+
+message MacroActionRule
+{
+    int32 timeout_ms = 1;
+    map<int32, MacroCondition> cancel_conditions = 2;
+    Action action = 3;
+}
+
+message MacroWaitRule
+{
+    int32 timeout_ms = 1;
+    map<int32, MacroCondition> cancel_conditions = 2;
+    map<int32, MacroRule> event_rules = 3;
+    map<int32, MacroRule> timeout_rules = 4;
+}
+
+message MacroAfterRule
+{
+    map<int32, MacroRule> rules = 1;
+    map<int32, MacroRule> timeout_rules = 2;
+    int32 timeout_ms = 3;
+}
+
+message MacroTimeoutRule
+{
+    int32 timeout_ms = 1;
+}
+
+message MacroAbortRule { }
+
+message MacroRule
+{
+    string path = 1;
+    oneof type {
+        MacroActionRule action = 4;
+        MacroWaitRule wait = 5;
+        MacroAfterRule after = 6;
+        MacroTimeoutRule timeout = 7;
+        MacroCheckRule check = 8;
+        MacroAbortRule abort = 9;
+    }
+}
+
+message MacroConfig
+{
+    // GUID in format 3303abb2-181e-4e83-8987-8a06c309a741
+    string guid = 1;
+    string name = 2;
+    MacroMode mode = 3;
+    map<int32, MacroCondition> conditions = 4;
+    map<int32, MacroRule> rules = 5;
+}

@@ -1,0 +1,129 @@
+syntax = "proto3";
+package axxonsoft.bl.mmexport;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/mmexport";
+
+import "axxonsoft/bl/mmexport/Export.proto";
+
+message Session
+{
+    string id = 1;
+    Options options = 2;
+}
+
+enum EState
+{
+    S_NONE      = 0;
+    S_RUNNING   = 1;
+    S_COMPLETED = 2;
+    S_REMOVED   = 3;
+}
+
+message Result
+{
+    message File
+    {
+        // If 'store_result_by_export_agent' flag wasn't set then the 'path' contains the file ID to
+        // download, otherwise it contains local absolute path and the file can't be downloaded
+        string path = 1; 
+        uint64 size = 2;
+        string min_timestamp = 3;
+        string max_timestamp = 4;
+        string mime_type = 5;
+        string cloud_id = 7;
+    }
+
+    repeated File files = 1;
+    bool succeeded = 2;
+}
+
+message State
+{
+    EState state = 1;
+    string last_frame_timestamp = 2;
+    Result result = 3;
+}
+
+message ListSessionsRequest
+{
+    string page_token = 1;
+    int32 page_size = 2;
+}
+
+message ListSessionsResponse
+{
+    message SessionInfo
+    {
+        Session session = 1;
+        State state = 2;
+    }
+    repeated SessionInfo sessions = 1;
+    string next_page_token = 2;
+}
+
+message StartSessionRequest
+{
+    Options session_options = 2;
+}
+
+message StartSessionResponse
+{
+    string started_session_id = 1;
+}
+
+message GetSessionStateRequest
+{
+    string session_id = 1;
+}
+
+message GetSessionStateResponse
+{
+    State session_state = 1;
+}
+
+message StopSessionRequest
+{
+    string session_id = 1;
+}
+
+message StopSessionResponse
+{
+    State session_state = 1;
+}
+
+message DestroySessionRequest
+{
+    string session_id = 1;
+}
+
+message DestroySessionResponse
+{
+}
+
+message DownloadFileRequest
+{
+    string session_id = 1;
+    string file_path = 2;
+    // Recommended chunk size appears to be 16-64 KiB.
+    // But beware, by default, gRPC limits incoming messages to 4 MB.
+    uint64 chunk_size_kb = 3;
+    uint64 start_from_chunk_index = 4;
+}
+
+message FileChunk
+{
+    uint64 index = 1;
+    bytes data = 2;
+}
+
+service ExportService
+{
+    rpc ListSessions(ListSessionsRequest) returns (stream ListSessionsResponse);
+
+    rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
+    rpc GetSessionState(GetSessionStateRequest) returns (GetSessionStateResponse);
+    rpc StopSession(StopSessionRequest) returns (StopSessionResponse);
+    rpc DestroySession(DestroySessionRequest) returns (DestroySessionResponse);
+
+    rpc DownloadFile(DownloadFileRequest) returns (stream FileChunk);
+}

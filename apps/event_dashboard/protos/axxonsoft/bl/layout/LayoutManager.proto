@@ -1,0 +1,767 @@
+syntax = "proto3";
+package axxonsoft.bl.layout;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/layout";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "axxonsoft/bl/primitive/Color.proto";
+import "axxonsoft/bl/events/Events.proto";
+
+
+enum EVideoFilterType
+{
+    EVideoFilterType_UNSPECIFIED = 0;
+    CONTRAST_VIDEO_FILTER = 1;
+    SHARPNESS_VIDEO_FILTER = 2;
+    DEINTERLACE_VIDEO_FILTER = 3;
+}
+
+enum ECameraStreamResolution
+{
+    CAMERA_STREAM_RESOLUTION_AUTO = 0;
+    CAMERA_STREAM_RESOLUTION_HIGH = 1;
+    CAMERA_STREAM_RESOLUTION_LOW = 2;
+    CAMERA_STREAM_RESOLUTION_ADAPTIVE = 3;
+}
+
+message Font
+{
+    // Specifies style information applied to text.
+    enum EStyle
+    {
+        // Normal text.
+        REGULAR   = 0x0;
+
+        // Bold text.
+        BOLD      = 0x1;
+
+        // Italic text.
+        ITALIC    = 0x2;
+
+        // Underlined text.
+        UNDERLINE = 0x4;
+
+        // Text with a line through the middle.
+        STRIKEOUT = 0x8;
+    }
+
+    // Font name.
+    string name = 1;
+
+    // Relative size. A size in points is defined by the equation:
+    // 
+    //   `(size in points) = (this size) * (frame's height)`
+    //
+    float size = 2;
+
+    primitive.Color color = 3;
+
+    EStyle style = 4;
+}
+
+message Label
+{
+    string text = 1;
+    Font font = 2;
+
+    // The offset is relative to the position of the component and normalized
+    // to frame's size. 
+    // Absolute position is defined by the equations:
+    //
+    //   `(abs.X) = (component's position.X) + (normalized_offset.X)*(frame's width)`
+    //   `(abs.Y) = (component's position.Y) + (normalized_offset.Y)*(frame's height)`
+    //
+    primitive.Point normalized_offset = 3;
+}
+
+message Icon
+{
+    enum ESkinType
+    {
+        SKIN_TYPE_UNSPECIFIED = 0;
+
+        DIRECTION_UP          = 1;
+        DIRECTION_RIGHT_UP    = 2;
+        DIRECTION_RIGHT       = 3;
+        DIRECTION_RIGHT_DOWN  = 4;
+        DIRECTION_DOWN        = 5;
+        DIRECTION_LEFT_DOWN   = 6;
+        DIRECTION_LEFT        = 7;
+        DIRECTION_LEFT_UP     = 8;
+    }
+
+    ESkinType skin_type = 1;
+
+    // Defines icon size relatively to frame size.
+    google.protobuf.FloatValue scale = 2;
+}
+
+message ComponentPosition
+{
+    string component_ap = 1;
+    primitive.Point position = 2;
+    Icon icon = 3;
+    Label label = 4;
+}
+
+message ComponentsPositions
+{
+    // Positions
+    repeated ComponentPosition positions = 1;
+
+    // Is visible
+    bool visible = 2;
+}
+
+message EquipmentInfo
+{
+    // Digital Output ("relay") positions on cell
+    ComponentsPositions relays_position = 1;
+
+    // Digital Input ("sensor", "ray") positions on cell.
+    ComponentsPositions sensors_position = 2;
+
+    // Positions of links (to cameras) on cell.
+    ComponentsPositions links_positions = 3;
+}
+
+message DigitalZoomParameters
+{
+    // Point of zoom.
+    primitive.Point zoom_point = 1;
+
+    // Value of zoom.
+    double zoom_value = 2;
+}
+
+message DefaultDigitalZoomParameters
+{
+    enum EPanomorphCameraPosition
+    {
+        PANOMORPH_CAMERAPOSITION_WALL = 0;
+        PANOMORPH_CAMERAPOSITION_CEILING = 1;
+        PANOMORPH_CAMERAPOSITION_GROUND = 2;
+    }
+
+
+    // Is panomorph on.
+    bool is_panomorph_on = 1;
+
+    // Camera position.
+    EPanomorphCameraPosition panomorph_position = 2;
+
+    /// Digital zoom parameters.
+    DigitalZoomParameters zoom_parameters = 3;
+}
+
+message VideoParameters
+{
+    enum EAspectRatioType
+    {
+        DEFAULT = 0; // stick to global flag options
+        RATIO = 1; // keep aspect ratio
+        FILL = 2; // fill in the cell
+    }
+
+    // Specifies possible view types for Immervision fisheye cameras
+    enum EPanomorphViewType
+    {
+        PTZ = 0; // PTZ view type
+        PERIMETER = 1; // Perimeter view type
+    }
+
+     // Current microphone.
+     string microphone = 1;
+
+     // Current audio volume.
+     int32 audio_volume = 2;
+
+     // Show tracking object enabled.
+     bool show_tracking = 3;
+
+     // Auto tracking enabled.
+     bool auto_tracking = 4;
+
+     // Auto fit enabled.
+     bool auto_fit = 5;
+
+     // Gets or sets current visualization filter id.
+     EVideoFilterType video_filter = 6;
+
+     // Rotate angle like 0, 90, 180, 270
+     int32 rotate_angle = 7;
+
+     // TODO: comment
+     map<string, bool> show_text_source_flags = 8;
+
+     // Stream resolution.
+     ECameraStreamResolution stream_resolution = 9;
+
+     // Current rays and relays visibility and locations.
+     EquipmentInfo equipment_info = 10;
+
+     // Default zoom.
+     DefaultDigitalZoomParameters  default_zoom_info = 11;
+
+     // Should cell connect to archive by default,
+     // instead of showing live video.
+     bool should_connect_to_archive = 12;
+
+     // Shows how the cell should be filled
+     EAspectRatioType aspect_ratio_type = 13;
+
+     //Stores an access point of a manually selected video stream for a cell
+     google.protobuf.StringValue video_stream = 14;
+
+     // Show overlay text enabled.
+     bool show_overlay_text = 15;
+
+     // View types for Immervision fisheye cameras.
+     EPanomorphViewType panomorph_view_type = 16;
+
+     // Show masking enabled.
+     bool show_masking = 17;
+}
+
+message EventBoardParams
+{
+    bool strict_filtering = 1;
+}
+
+message StatusBoardParams
+{
+    bool show_only_problem_servers = 1;
+}
+
+message MessageBoardButtonParams 
+{
+    string text = 1;
+    string macro = 2;
+    string image = 3;
+    int32 column = 4;
+    bool is_close_on_click = 5;	
+}
+
+message MessageBoardImageParams
+{
+    // Image ID.
+    // The image data should be uploaded/downloaded via LayoutImagesManager.
+    string image_id = 1;
+
+    bool is_fit = 2;
+}
+
+message MessageBoardRulesParams
+{
+    string message = 1; 
+    bool is_show_last_event = 2;
+    bool is_comment_needed = 3; 
+    bool is_comment_required = 4; 
+    bool is_active_camera_mode = 5; 
+    bool is_alert_camera_mode = 6; 
+    bool is_related_camera_mode = 7; 
+    bool is_related_to_linked_camera_mode = 8; 
+
+    repeated MessageBoardButtonParams buttons = 9; 
+    bool is_show_events = 10; 
+    string text_color = 11; 
+    string text_font = 12; 
+    MessageBoardImageParams image = 13;
+}
+
+message MessageBoardParams
+{
+    MessageBoardRulesParams rules = 1;
+}
+
+enum EAveragingIntervalType
+{
+    MINUTES = 0;
+    HOURS = 1;
+    DAYES = 2;
+    WEEKS = 3;
+    MONTH = 4;
+}
+
+message CounterBoardParams 
+{
+    int32 factor = 1;
+    EAveragingIntervalType averaging_interval_type = 2;
+}
+
+message WebBoardParams
+{
+    enum EWebEngineType
+    {
+        DOT_NET = 0;
+        // Chromium Embedded Framework
+        CEF = 1;
+        // Mozilla Firefox
+        GECKO = 2;
+    }
+
+    string url_address = 1;
+    EWebEngineType web_engine = 2;
+    string script_path = 3;
+
+}
+
+message EquipmentBoardParams
+{
+    int32 sort_column = 1;
+    bool sort_descending = 2;
+    bool last_name_sort_descending = 3;
+    bool hide_filters = 4;
+    string search_filter = 5;
+    int32 status_filter = 6;
+    string map_filter = 7;
+    repeated string type_filters = 8;
+    repeated string component_type_filters = 9;
+    repeated string state_filters = 10;
+}
+
+message AlarmBoardFilterParams
+{
+    string source_ap = 1;
+    events.Alert.EInitiatorType initiator_type = 2;
+    string initiator = 3; // user login or macro ID
+}
+
+message AlarmBoardParams
+{
+    repeated AlarmBoardFilterParams filters = 1;
+}
+
+message BoardParams
+{
+    bool hide_panel = 1;
+
+    // Open layout on event.
+    bool open_layout_on_event = 2 [deprecated = true];
+
+    repeated string selected_filters = 3;
+
+    // Board name.
+    string name = 4;
+	
+    oneof board_type {
+        EventBoardParams event_board_type = 20;
+        StatusBoardParams status_board_type = 21;
+        MessageBoardParams message_board_type = 22;
+        CounterBoardParams counter_board_type = 23;
+        WebBoardParams web_board_type = 24;
+        EquipmentBoardParams equipment_board_type = 25;
+        AlarmBoardParams alarm_board_type = 26;
+    }
+}
+
+message FullBoardSettings
+{
+    // Gets or sets template board parameters.
+    BoardParams params = 1;
+
+    enum EBoardViewState
+    {
+        BOARD_VIEW_STATE_IMAGE_ONLY = 0;
+        BOARD_VIEW_STATE_TEXT_ONLY = 1;
+        BOARD_IMAGE_AND_TEXT = 2;
+    }
+
+    EBoardViewState default_view_state = 2;
+}
+
+message VideoStitchingTransform
+{
+    primitive.SizeInt texture_size = 1;
+    double ratio = 2;
+    repeated double intrinsic_matrix = 3;
+    repeated double rotation_matrix = 4;
+	
+    enum EWarpType
+    {
+        WARP_PLANE = 0;
+        WARP_CYLINDRICAL = 1;
+        WARP_SPHERICAL = 2;
+        WARP_FISHEYE = 3;
+        WARP_STEREOGRAPHIC = 4;
+        WARP_COMPRESSED_PLANEA2B1 = 5;
+        WARP_COMPRESSED_PLANEA15B1 = 6;
+        WARP_COMPRESSED_PLANEPORTRAITA2B1 = 7;
+        WARP_COMPRESSED_PLANEPORTRAITA15B1 = 8;
+        WARP_PANINI_A2B1 = 9;
+        WARP_PANINI_A15B1 = 10;
+        WARP_PANINI_PORTRAIT_A2B1 = 11;
+        WARP_PANINI_PORTRAIT_A15B1 = 12;
+        WARP_MERCATOR = 13;
+        WARP_TRANSVERSEMERCATOR = 14;
+    }
+	
+    EWarpType warp_type = 5;
+}
+
+message VideoStitchingParameters
+{
+    bool is_stitching_configured = 1;
+    VideoStitchingTransform transform = 2;
+    repeated double crop = 3;
+}
+
+message Cell
+{
+    // A zero-based position number of the cell.
+    int32 position = 1;
+
+    // A value that determines how to distribute container's space. 
+    // It specifies a portion of the whole container's dimensions. 
+    primitive.Size dimensions = 2;
+    
+    // The position number of the left sibling cell.
+    
+    // WARNING:
+    // FIXME: default value for this field will be 0.
+    // We can't here distinguish uninitialized value from set position to 0.
+    // WARN and Discuss with UI developers !!!
+    int32 left_sibling_position = 3;
+    
+    // The position number of the right sibling cell.
+    int32 right_sibling_position = 4;
+    
+    // The position number of the top sibling cell.
+    int32 top_sibling_position = 5;
+    
+    // The position number of the bottom sibling cell.
+    int32 bottom_sibling_position = 6;
+    
+    // Camera Access Point
+    string camera_ap = 7;
+
+
+    // Cell parameters for video channel.
+    VideoParameters video_parameters = 8;
+
+    // Gets or sets board parameters.
+    FullBoardSettings board_settings = 9;
+
+    // Position number of the linked siblings.
+    repeated int32 linked_cells = 10;
+	
+    VideoStitchingParameters video_stitching_parameters = 11;
+
+    // Stretching the right boundary of the area (cell) in the layout.
+    float right_spring = 12;
+
+    // Stretching the bottom boundary of the area (cell) in the layout.
+    float bottom_spring = 13;
+}
+
+message AlertPanelViewConfiguration
+{
+    enum EAlertPanelState
+    {
+        ALERT_PANEL_STATE_ARCHIVE_ALERT = 0;
+        ALERT_PANEL_STATE_CURRENT_ALERT = 1;
+    }
+
+    // Alert panel state.
+    EAlertPanelState panel_state = 1;
+
+    enum EAlertPanelOpeningState
+    {
+        // Container is hidden.
+        ALERT_PANEL_OPENING_STATE_HIDDEN = 0;
+
+        // Container is middle.
+        ALERT_PANEL_OPENING_STATE_MIDDLE = 1;
+
+        // Container is full screen.
+        ALERT_PANEL_OPENING_STATE_FULLSCREEN = 2;
+    }
+
+    EAlertPanelOpeningState opening_state = 2;
+
+    // Value indicating height of alert container in middle state relative size of the video monitor.
+    double middle_percent = 3;
+
+    // Control count in line.
+    int32 control_count_in_line = 4;
+
+    enum EAlertPanelEventFilter
+    {
+        ALERT_PANEL_EVENT_FILTER_NONE = 0x000;
+        ALERT_PANEL_EVENT_FILTER_ALARM = 0x001;
+        ALERT_PANEL_EVENT_FILTER_WARNING = 0x002;
+        ALERT_PANEL_EVENT_FILTER_FALSE = 0x004;
+        ALERT_PANEL_EVENT_FILTER_UNCLASSIFIED = 0x008;
+        ALERT_PANEL_EVENT_FILTER_ALL = 0x00F;
+    }
+
+    // Bitfield of EAlertPanelEventFilter enums
+    int32 event_filter_mask = 5;
+}
+
+enum EMapViewMode
+{
+    MAP_VIEW_MODE_LAYOUT_ONLY = 0;
+    MAP_VIEW_MODE_MAP_AND_LAYOUT = 1;
+    MAP_VIEW_MODE_MAP_ONLY = 2;
+    MAP_VIEW_MODE_IMMERSION = 3;
+}
+
+// Arrangement for map: zoom info and incline
+message MapArrangement
+{
+    // Position in map relative coordinates.
+    primitive.Point zoom_position = 1;
+
+    // TODO: in which units?
+    // TODO: int type here is not consistent with DigitalZoomParameters's double type
+    int32 zoom_value = 2;
+
+    // Map incline
+    double map_top_viewport_position = 3;
+
+    // Uses EMapViewMode values as a key here.
+    map<int32 /*Use EMapViewMode values here*/, double> video_transparency_collection = 4;
+	
+    bool is_label_on = 5; // Enables or disables the display of the names of objects on the map.
+    bool is_blink_on = 6; // Enables or disables camera vibration on alarm.
+    bool is_switch_layouts_on = 7; // Allows you to switch to the layout by clicking on the camera on the map.
+    bool is_top_view_on = 8; // Switching 2D - 3D. (View from above).
+    bool show_offline_cameras = 9; // Enables or disables the display of unavailable devices on the map.
+    bool is_thumbnail_3d_on = 10; // Enables or disables 3D thumbnail display.
+}
+
+message SpecialLayout
+{
+    string id = 1;
+    bool enabled = 2;
+}
+
+message SpecialLayouts
+{
+   SpecialLayout favorite = 1;
+   SpecialLayout alarm = 2;
+   SpecialLayout dynamic = 3;
+}
+
+// Layout Body
+message Layout
+{
+    // Unique layout id provided by client.
+    string id = 1;
+
+    // User friendly name.
+    string display_name = 2;
+
+    bool is_user_defined = 3;
+
+    // Flag indicating whether layout is wide.
+    bool is_for_alarm = 4;
+    
+    bool alarm_mode = 5;
+
+    AlertPanelViewConfiguration  alert_panel_state = 16;
+
+    string map_id = 17;
+
+    EMapViewMode map_view_mode = 18;
+
+    map<int32, Cell> cells = 19;
+	
+    MapArrangement map_arrangement = 20;
+}
+
+// layout meta information
+message LayoutMeta
+{
+    // layout unique id
+    string layout_id = 1;
+
+    // If owned_by_user = true, current user has full access to this layout.
+    // Otherwise it's a shared layout owned by another user.
+    bool owned_by_user = 2;
+
+    bool has_write_access = 5; // write permission for shared roles
+
+    google.protobuf.StringValue timezone_id = 6; // timezone id restriction for shared roles
+
+    // List of roles-id's to grant read access to layout.
+    repeated string shared_with = 3;
+    
+    map<string /*role_id*/, SharingProperty> sharing_properties = 7;
+
+    // Current packet version
+    string etag = 4;
+}
+
+message LayoutFull
+{
+    LayoutMeta meta = 1;
+    Layout body = 2;
+}
+
+message Slideshow
+{
+    // Slideshow's unique ID (provided by client or randomly generated by server)
+    string id = 1;
+
+    // Layouts' IDs to show
+    repeated string layouts_ids = 2;
+}
+
+enum EViewMode
+{
+    // Include only layout meta info.
+    VIEW_MODE_ONLY_META = 0;
+    
+    // Full layout info including body.
+    VIEW_MODE_FULL = 1;
+}
+
+message ListLayoutsRequest
+{
+    EViewMode view = 1;
+}
+
+message ListLayoutsResponse
+{
+    // Currently opened layout id
+    string current = 1;
+    // Ordered set of layout info.
+    repeated LayoutFull items = 2;
+    SpecialLayouts special_layouts = 3;
+    
+    // Shows whether current layout was chosen as default
+    bool use_current_layout_as_default = 4;
+
+    repeated Slideshow slideshows = 5;
+}
+
+message BatchGetLayoutsRequest
+{
+    message Locator
+    {
+        string layout_id = 1;
+        string etag = 2;
+    }
+    repeated Locator items = 1;
+}
+
+message BatchGetLayoutsResponse
+{
+    repeated LayoutFull items = 1;
+    repeated string not_found_items = 2;
+}
+
+message TaggedLayout
+{
+    Layout body = 1;
+    string etag = 2;
+}
+
+message SharingProperty {
+    // Assumed false in default
+    bool has_write_access = 1;
+    // Assumed not given in default
+    google.protobuf.StringValue timezone_id = 2;
+};
+
+message UpdateSharing
+{
+    string layout_id = 1;
+    // Full list of role id's.
+    repeated string role_ids = 2;
+
+    map<string /*role_id*/, SharingProperty> sharing_properties = 4;
+
+    // Last seen layout etag (empty when layout is creating)
+    string etag = 3;
+}
+
+message UpdateOrdering
+{
+    string layout_id = 1;
+    int32 new_position = 2;
+}
+
+message UpdateRequest
+{
+    // Provide new layouts to create.
+    // Layout id's are generated by client side,
+    // using GUID as layout id is recomended.
+    repeated Layout created = 1;
+
+    // Provide list of updated layouts.
+    // Dirty writes are prevented using etag value.
+    repeated TaggedLayout modified = 2;
+
+    // Specify list of layout id's to remove
+    repeated string removed = 3;
+
+    // Change sharing for layout by specifying updated list of role-id's for specific layout.
+    repeated UpdateSharing sharing = 4;
+
+    // Change ordering by scecifying new position for specific layout.
+    repeated UpdateOrdering ordering = 5;
+
+    // Set new current layout id
+    string current_layout_id = 6;
+	
+    SpecialLayouts specials = 7;
+    
+    // Set this flag to make current layout default
+    bool use_current_layout_as_default = 8;
+
+    // Pass slideshows to update (or create)
+    repeated Slideshow updated_slideshows = 11;
+
+    // Pass slideshows' IDs to remove
+    repeated string    removed_slideshows = 12;
+}
+
+message UpdateResponse
+{
+    repeated string created_layouts = 1;
+}
+
+message LayoutOnView
+{
+    string layout_id = 1;
+    string layout_display_name = 2;
+}
+
+message LayoutsOnViewRequest
+{
+    repeated LayoutOnView layouts = 1;
+}
+
+message LayoutsOnViewResponse
+{
+}
+
+service LayoutManager
+{
+    rpc ListLayouts(ListLayoutsRequest) returns (ListLayoutsResponse) {
+        option (google.api.http) = {
+            get: "/v1/layouts"
+        };
+    }
+
+    rpc BatchGetLayouts(BatchGetLayoutsRequest) returns (BatchGetLayoutsResponse) {
+        option (google.api.http) = {
+            post: "/v1/layouts:batchGet"
+            body: "*"
+        };
+    }
+
+    rpc Update(UpdateRequest) returns (UpdateResponse) {
+        option (google.api.http) = {
+            post: "/v1/layouts:update"
+            body: "*"
+        };
+    }
+	
+    rpc LayoutsOnView(LayoutsOnViewRequest) returns (LayoutsOnViewResponse);
+}

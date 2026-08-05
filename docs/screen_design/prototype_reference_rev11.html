@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평택도시공사 통합관제센터 - Raon Visual System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Animations */
+        @keyframes blink-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .animate-blink-red { animation: blink-red 1.5s infinite; }
+
+        @keyframes flash-alert {
+            0% { background-color: rgba(255, 255, 255, 0.3); }
+            100% { background-color: transparent; }
+        }
+        .animate-flash { animation: flash-alert 0.8s ease-out; }
+
+        @keyframes slide-in-right {
+            0% { opacity: 0; transform: translateX(20px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-in-right { animation: slide-in-right 0.4s ease-out; }
+
+        /* Weather Marquee Animation */
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+            display: flex;
+            gap: 1rem;
+            width: max-content;
+            animation: marquee 20s linear infinite;
+        }
+        .animate-marquee:hover {
+            animation-play-state: paused;
+        }
+
+        /* Base Styles */
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0b1120;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+        .font-tech { font-family: 'Orbitron', sans-serif; }
+        .font-official { font-family: 'Noto Sans KR', sans-serif; }
+
+        /* Map & Popup Overrides */
+        #map { background: #e5e7eb; height: 100%; width: 100%; z-index: 0; }
+        .custom-marker-icon { background: transparent; border: none; }
+        
+        .leaflet-popup-content-wrapper {
+            background: #1e293b;
+            color: white;
+            border: 1px solid #475569;
+            border-radius: 0.5rem;
+            padding: 0;
+        }
+        .leaflet-popup-content { margin: 0; width: 320px !important; }
+        .leaflet-popup-tip { background: #1e293b; border: 1px solid #475569; }
+        .leaflet-container a.leaflet-popup-close-button { color: #94a3b8; padding: 4px; }
+        
+        /* Bright Map Specifics */
+        .leaflet-tile-container { filter: none !important; }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="h-14 bg-slate-900 border-b border-slate-700 flex-shrink-0 flex justify-between items-center px-6 shadow-lg z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-700 rounded flex items-center justify-center shadow-lg shadow-blue-900/50">
+                <i class="fas fa-landmark text-white text-sm"></i>
+            </div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-lg font-black text-white tracking-tight font-official whitespace-nowrap">
+                    평택도시공사 <span class="text-blue-400">통합관제센터</span>
+                </h1>
+                <div class="h-3 w-px bg-slate-600 hidden md:block"></div>
+                <div class="flex items-center gap-2 opacity-80 hidden lg:flex">
+                    <span class="text-[11px] text-slate-400 font-medium tracking-wide">System By RaonvisualSystem</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden md:flex items-center gap-6 text-sm">
+            <div class="flex items-center gap-2 text-slate-300">
+                <i class="fas fa-map-marker-alt text-slate-500 text-xs"></i>
+                <span class="font-bold">경기 평택</span>
+                <span class="text-slate-600 mx-1">|</span>
+                <i class="fas fa-sun text-white"></i>
+                <span class="text-white">맑음</span>
+            </div>
+            <div class="flex items-center gap-4 bg-slate-800/50 px-3 py-1 rounded border border-slate-700/50">
+                <div class="flex items-center gap-2"><span class="text-slate-400 text-xs">기온</span><span class="text-white font-tech font-bold">24.5°C</span></div>
+                <div class="w-px h-3 bg-slate-700"></div>
+                <div class="flex items-center gap-2"><span class="text-slate-400 text-xs">습도</span><span class="text-blue-300 font-tech">45%</span></div>
+                <div class="w-px h-3 bg-slate-700"></div>
+                <div class="flex items-center gap-2"><span class="text-slate-400 text-xs">미세먼지</span><span class="text-green-400 text-xs font-bold">좋음</span></div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-5">
+            <div id="clock" class="text-sm font-tech text-blue-100 font-bold tracking-wider tabular-nums bg-slate-800 px-3 py-1 rounded border border-slate-700/50 shadow-inner">0000-00-00 00:00:00</div>
+            <button class="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700"><i class="fas fa-cog text-xs"></i></button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Enhanced Report Modal (Split View + Write) -->
+        <div id="reportModal" class="absolute inset-0 z-[9999] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-600 rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col animate-slide-in-right overflow-hidden">
+                <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div id="modalIconBg" class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg">
+                            <i id="modalIcon" class="fas fa-file-alt text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 id="modalTitle" class="text-xl font-bold text-white tracking-tight">보고서 시스템</h3>
+                            <p id="modalSubtitle" class="text-xs text-slate-400">AxxonONE Intelligent Reporting Module</p>
+                        </div>
+                    </div>
+                    <button onclick="closeReportModal()" class="text-slate-400 hover:text-white transition p-2 rounded hover:bg-slate-700"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <div class="flex flex-1 overflow-hidden">
+                    <div class="w-1/3 border-r border-slate-700 bg-slate-900/50 flex flex-col">
+                        <div class="p-3 border-b border-slate-700 bg-slate-800/30 flex gap-2">
+                            <div class="relative flex-1">
+                                <input type="text" placeholder="검색..." class="w-full bg-slate-800 border border-slate-600 rounded py-1.5 pl-8 pr-3 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <i class="fas fa-search absolute left-2.5 top-2.5 text-slate-500 text-xs"></i>
+                            </div>
+                            <button onclick="showCreateForm()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 rounded text-sm font-bold shadow transition flex items-center gap-1"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="flex-1 overflow-y-auto custom-scroll p-2 space-y-1" id="reportList"></div>
+                    </div>
+                    <div class="w-2/3 bg-slate-800 flex flex-col">
+                        <div class="flex-1 p-8 overflow-y-auto custom-scroll" id="reportContentArea">
+                            <div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-50"><i class="fas fa-folder-open text-6xl mb-4"></i><p>좌측 목록에서 열람할 보고서를 선택하거나<br>상단의 <b>[+]</b> 버튼을 눌러 새로 작성하세요.</p></div>
+                        </div>
+                        <div id="viewActionBar" class="hidden p-4 border-t border-slate-700 bg-slate-900 flex justify-end gap-3">
+                            <button class="px-4 py-2 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 text-sm font-medium transition"><i class="fas fa-download mr-2"></i>PDF 다운로드</button>
+                            <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500 text-sm font-bold shadow-lg transition"><i class="fas fa-print mr-2"></i>인쇄</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Sidebar -->
+        <aside class="w-72 flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col hidden md:flex z-30 shadow-xl">
+            <!-- Search & Header -->
+            <div class="p-4 border-b border-slate-800">
+                <h3 class="text-slate-400 text-xs font-bold uppercase mb-3 flex justify-between items-center">
+                    <span>Zone List (관할 구역)</span>
+                    <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 rounded">Total: 15</span>
+                </h3>
+                <div class="relative">
+                    <input type="text" id="zoneSearch" placeholder="구역 명칭 검색..." class="w-full bg-slate-800 text-slate-200 text-sm border border-slate-700 rounded pl-8 pr-3 py-1.5 focus:outline-none focus:border-blue-500 placeholder-slate-500 transition">
+                    <i class="fas fa-search absolute left-2.5 top-2 text-slate-500 text-xs"></i>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto custom-scroll p-2">
+                <div id="zoneListContainer" class="space-y-1"></div>
+            </div>
+            
+            <div class="p-4 bg-slate-800 border-t border-slate-700">
+                <h3 class="text-slate-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
+                    <i class="fas fa-file-contract text-blue-400"></i> 통계 및 보고서 (Reports)
+                </h3>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button onclick="openReportSystem('PATROL')" class="bg-slate-700 hover:bg-slate-600 hover:scale-[1.02] transition-all rounded-lg p-3 flex flex-col items-center justify-center border border-slate-600 shadow-md group">
+                        <i class="fas fa-user-shield text-xl text-green-400 mb-2 group-hover:animate-bounce"></i>
+                        <span class="text-xs font-bold text-white">순찰 보고서</span>
+                    </button>
+                    <button onclick="openReportSystem('INCIDENT')" class="bg-slate-700 hover:bg-slate-600 hover:scale-[1.02] transition-all rounded-lg p-3 flex flex-col items-center justify-center border border-slate-600 shadow-md group">
+                        <i class="fas fa-exclamation-triangle text-xl text-red-400 mb-2 group-hover:animate-shake"></i>
+                        <span class="text-xs font-bold text-white">사건 보고서</span>
+                    </button>
+                </div>
+                
+                <div class="bg-slate-900 rounded border border-slate-700 p-2 overflow-hidden relative group">
+                    <div class="flex justify-between items-center text-xs mb-2 px-1">
+                        <span class="text-slate-400 font-bold flex items-center gap-1"><i class="fas fa-globe-asia text-blue-400"></i> 전국 날씨</span>
+                        <span class="text-[9px] text-slate-500">KMA Data</span>
+                    </div>
+                    <div class="animate-marquee hover:pause" id="weatherMarquee"></div>
+                    <div class="absolute top-0 left-0 w-4 h-full bg-gradient-to-r from-slate-900 to-transparent pointer-events-none"></div>
+                    <div class="absolute top-0 right-0 w-4 h-full bg-gradient-to-l from-slate-900 to-transparent pointer-events-none"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Section -->
+        <section class="flex-1 flex flex-col relative bg-slate-900 min-w-0">
+            <!-- Map Toolbar -->
+            <div id="mapToolbar" class="absolute top-4 left-4 z-[500] flex gap-2">
+                <div class="bg-slate-800/90 backdrop-blur border border-slate-600 rounded flex overflow-hidden shadow-lg p-1">
+                    <button id="btn-gis" onclick="setMapMode('GIS')" class="px-3 py-1.5 text-white bg-blue-600 rounded text-xs font-bold hover:bg-blue-500 transition">GIS VIEW</button>
+                    <button id="btn-sat" onclick="setMapMode('SAT')" class="px-3 py-1.5 text-slate-300 rounded text-xs font-bold hover:bg-slate-700 hover:text-white transition">SATELLITE</button>
+                </div>
+            </div>
+
+            <!-- Leaflet Map -->
+            <div id="map" class="flex-1 w-full h-full"></div>
+
+            <!-- Video Matrix Container -->
+            <div id="videoMatrixLayer" class="absolute inset-0 z-[400] bg-slate-900 hidden flex flex-col">
+                <div class="h-10 bg-slate-800 border-b border-slate-700 flex justify-between items-center px-4">
+                    <div class="flex items-center gap-2 text-white font-bold">
+                        <i class="fas fa-th text-blue-400"></i>
+                        <span id="matrixTitle">CCTV Matrix View</span>
+                        <span id="matrixCount" class="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-normal">0 cams</span>
+                    </div>
+                    <button onclick="closeZoneCCTV()" class="text-slate-400 hover:text-white text-sm bg-slate-700 hover:bg-red-600 px-3 py-1 rounded transition">
+                        <i class="fas fa-times mr-1"></i> 닫기 (Map)
+                    </button>
+                </div>
+                <div id="matrixGrid" class="flex-1 p-2 grid gap-1 bg-black"></div>
+            </div>
+
+            <!-- Bottom Snapshot List Panel -->
+            <div class="h-48 flex-shrink-0 bg-slate-900 border-t border-slate-700 p-0 flex flex-col z-20 relative">
+                <div class="px-4 py-2 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
+                    <h3 class="text-xs font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                        <i class="fas fa-images text-blue-400"></i> 실시간 이벤트 스냅샷 (Real-time Snapshots)
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] text-green-400 flex items-center gap-1"><i class="fas fa-sync fa-spin"></i> Live Sync</span>
+                    </div>
+                </div>
+                <div id="snapshotContainer" class="flex-1 overflow-x-auto custom-scroll flex items-center gap-3 p-3 whitespace-nowrap bg-slate-900/90"></div>
+            </div>
+        </section>
+
+        <!-- Right Sidebar -->
+        <aside class="w-80 flex-shrink-0 bg-slate-900 border-l border-slate-700 flex flex-col z-30 shadow-xl">
+            <!-- Video Area: LOCAL VIDEO (FILE SYSTEM SAFE, RESOLUTION FIXED) -->
+            <div class="h-1/3 bg-black border-b border-slate-700 p-2 flex flex-col">
+                <div class="flex justify-between items-center mb-1 px-1">
+                    <span class="text-xs font-bold text-red-500 flex items-center gap-1">
+                        <i class="fas fa-circle fa-xs animate-pulse"></i> YTN NEWS
+                    </span>
+                    <span class="text-[10px] text-slate-400">실시간 뉴스</span>
+                </div>
+                <div class="flex-1 bg-black rounded relative overflow-hidden border border-red-500/50 flex flex-col items-center justify-center bg-black">
+                    <!-- FIX: object-contain for 1920x1080 without cropping -->
+                    <video class="w-full h-full object-contain" autoplay loop muted playsinline controls>
+                        <source src="news_video.mp4" type="video/mp4">
+                        <div class="p-4 text-center text-slate-500 text-xs">
+                            <i class="fas fa-video-slash text-2xl mb-2"></i><br>
+                            비디오 파일을 찾을 수 없습니다.<br>
+                            'news_video.mp4' 파일을<br>같은 폴더에 넣어주세요.
+                        </div>
+                    </video>
+                    
+                    <div class="absolute top-2 right-2 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold pointer-events-none opacity-80">LIVE</div>
+                </div>
+            </div>
+            
+            <!-- Disaster Alerts Area -->
+            <div class="flex-1 flex flex-col overflow-hidden bg-slate-900">
+                <div class="p-3 border-b border-slate-800 bg-slate-800 flex justify-between items-center">
+                    <h3 class="text-white text-xs font-bold flex items-center gap-2">
+                        <i class="fas fa-broadcast-tower text-orange-500 animate-pulse"></i>
+                        <span>재난/안전 문자 수신 (ALERTS)</span>
+                    </h3>
+                    <button class="text-[10px] text-slate-400 hover:text-white" onclick="document.getElementById('eventLog').innerHTML=''">Clear All</button>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scroll p-2 space-y-3" id="eventLog">
+                    <!-- Alerts injected here -->
+                </div>
+            </div>
+        </aside>
+
+    </main>
+
+    <script>
+        // --- Clock Logic ---
+        function updateClock() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '-').replace('.', '');
+            const timeStr = now.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('clock').innerText = `${dateStr} ${timeStr}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- Weather Marquee Generator ---
+        const weatherMarquee = document.getElementById('weatherMarquee');
+        const weatherData = [{city:'평택',temp:'24°C',icon:'fa-sun text-yellow-400'},{city:'서울',temp:'24°C',icon:'fa-sun text-yellow-400'},{city:'부산',temp:'26°C',icon:'fa-cloud-sun text-slate-300'},{city:'대구',temp:'27°C',icon:'fa-sun text-orange-400'},{city:'인천',temp:'23°C',icon:'fa-cloud text-slate-400'},{city:'광주',temp:'25°C',icon:'fa-cloud-sun text-slate-300'},{city:'대전',temp:'24°C',icon:'fa-cloud text-slate-400'},{city:'울산',temp:'25°C',icon:'fa-wind text-blue-300'},{city:'세종',temp:'23°C',icon:'fa-cloud-rain text-blue-400'},{city:'강릉',temp:'22°C',icon:'fa-water text-blue-500'},{city:'제주',temp:'25°C',icon:'fa-umbrella text-blue-400'},{city:'독도',temp:'20°C',icon:'fa-flag text-blue-300'}];
+        const displayWeather = [...weatherData, ...weatherData];
+        displayWeather.forEach(w => {
+            const card = document.createElement('div'); card.className = "bg-slate-800 rounded p-2 min-w-[70px] flex flex-col items-center justify-center border border-slate-700 shadow-sm";
+            card.innerHTML = `<div class="text-[10px] text-slate-400 mb-1">${w.city}</div><i class="fas ${w.icon} text-sm mb-1"></i><div class="text-xs font-bold text-white font-tech">${w.temp}</div>`;
+            weatherMarquee.appendChild(card);
+        });
+
+        // --- Zone List & Matrix Logic (FIXED IMAGES) ---
+        const zoneData = [
+            { name: "평택시청 본관", status: "ON", color: "bg-green-900 text-green-300", cams: 4 },
+            { name: "평택시청 광장", status: "ON", color: "bg-green-900 text-green-300", cams: 9 },
+            { name: "평택시청 옥상", status: "ON", color: "bg-green-900 text-green-300", cams: 1 },
+            { name: "송탄출장소", status: "ON", color: "bg-green-900 text-green-300", cams: 4 },
+            { name: "서버실 (보안)", status: "ON", color: "bg-green-900 text-green-300", cams: 1 },
+            { name: "지하 주차장 A", status: "ON", color: "bg-green-900 text-green-300", cams: 9 },
+            { name: "지하 주차장 B", status: "ALT", color: "bg-red-900 text-red-300", cams: 9 },
+            { name: "주차 정산소", status: "ON", color: "bg-green-900 text-green-300", cams: 2 },
+            { name: "동문 게이트", status: "ON", color: "bg-green-900 text-green-300", cams: 2 },
+            { name: "서문 게이트", status: "ON", color: "bg-green-900 text-green-300", cams: 2 },
+            { name: "소사벌 레포츠타운", status: "ON", color: "bg-green-900 text-green-300", cams: 16 },
+            { name: "흡연 구역", status: "ALT", color: "bg-yellow-900 text-yellow-300", cams: 1 },
+            { name: "자재 창고", status: "ON", color: "bg-green-900 text-green-300", cams: 4 },
+            { name: "평택역 광장", status: "OFF", color: "bg-slate-700 text-slate-400", cams: 9 },
+            { name: "외곽 울타리", status: "ON", color: "bg-green-900 text-green-300", cams: 16 }
+        ];
+
+        const zoneListContainer = document.getElementById('zoneListContainer');
+        const searchInput = document.getElementById('zoneSearch');
+
+        function renderZoneList(filterText = '') {
+            zoneListContainer.innerHTML = '';
+            const filtered = zoneData.filter(z => z.name.includes(filterText));
+            if (filtered.length === 0) { zoneListContainer.innerHTML = `<div class="text-center text-xs text-slate-500 py-4">검색 결과 없음</div>`; return; }
+            filtered.forEach(zone => {
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between p-2 rounded hover:bg-slate-800 border-l-4 border-transparent hover:border-blue-500 cursor-pointer transition group";
+                el.onclick = () => openZoneCCTV(zone.name, zone.cams);
+                el.innerHTML = `<span class="text-sm font-medium text-slate-400 group-hover:text-white transition">${zone.name}</span><span class="text-[10px] ${zone.color} px-1.5 py-0.5 rounded font-bold min-w-[30px] text-center">${zone.status}</span>`;
+                zoneListContainer.appendChild(el);
+            });
+        }
+        renderZoneList();
+        searchInput.addEventListener('input', (e) => { renderZoneList(e.target.value); });
+
+        // --- Video Matrix Logic (Stable Picsum Images) ---
+        function openZoneCCTV(zoneName, camCount) {
+            const matrixLayer = document.getElementById('videoMatrixLayer');
+            const matrixGrid = document.getElementById('matrixGrid');
+            const matrixTitle = document.getElementById('matrixTitle');
+            const matrixCount = document.getElementById('matrixCount');
+            const mapToolbar = document.getElementById('mapToolbar');
+
+            matrixTitle.innerText = zoneName;
+            matrixCount.innerText = `${camCount} cams`;
+
+            let gridClass = 'grid-cols-1';
+            if (camCount > 1 && camCount <= 4) gridClass = 'grid-cols-2';
+            else if (camCount > 4 && camCount <= 9) gridClass = 'grid-cols-3';
+            else if (camCount > 9) gridClass = 'grid-cols-4';
+
+            matrixGrid.className = `flex-1 p-2 grid gap-1 bg-black ${gridClass}`;
+            matrixGrid.innerHTML = '';
+
+            for(let i=0; i<camCount; i++) {
+                const videoDiv = document.createElement('div');
+                videoDiv.className = "relative bg-slate-800 border border-slate-700 overflow-hidden group";
+                videoDiv.innerHTML = `
+                    <img src="https://picsum.photos/seed/${zoneName}-${i}/400/300" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition" alt="CCTV">
+                    <div class="absolute top-1 left-1 text-[10px] text-green-400 font-mono bg-black/70 px-1 rounded border border-green-900">CAM-${String(i+1).padStart(2,'0')}</div>
+                    <div class="absolute bottom-1 right-1 text-[8px] text-white font-mono bg-red-600/80 px-1 rounded animate-pulse">REC</div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                        <i class="fas fa-expand text-white text-2xl drop-shadow-md cursor-pointer hover:scale-110 transition"></i>
+                    </div>
+                `;
+                matrixGrid.appendChild(videoDiv);
+            }
+            matrixLayer.classList.remove('hidden');
+            mapToolbar.classList.add('hidden');
+        }
+
+        function closeZoneCCTV() {
+            document.getElementById('videoMatrixLayer').classList.add('hidden');
+            document.getElementById('mapToolbar').classList.remove('hidden');
+        }
+
+        // --- Leaflet Map Logic ---
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([36.9923, 127.1126], 15);
+        const gisLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+        gisLayer.addTo(map);
+
+        function setMapMode(mode) {
+            if (mode === 'GIS') {
+                map.removeLayer(satelliteLayer); gisLayer.addTo(map);
+                document.getElementById('btn-gis').className = "px-3 py-1.5 text-white bg-blue-600 rounded text-xs font-bold hover:bg-blue-500 transition";
+                document.getElementById('btn-sat').className = "px-3 py-1.5 text-slate-300 rounded text-xs font-bold hover:bg-slate-700 hover:text-white transition";
+            } else {
+                map.removeLayer(gisLayer); satelliteLayer.addTo(map);
+                document.getElementById('btn-sat').className = "px-3 py-1.5 text-white bg-blue-600 rounded text-xs font-bold hover:bg-blue-500 transition";
+                document.getElementById('btn-gis').className = "px-3 py-1.5 text-slate-300 rounded text-xs font-bold hover:bg-slate-700 hover:text-white transition";
+            }
+        }
+
+        const fireIcon = L.divIcon({ className: 'custom-marker-icon', html: `<div class="relative w-8 h-8"><div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white animate-blink-red border-2 border-white shadow-xl cursor-pointer hover:scale-110 transition"><i class="fas fa-fire"></i></div></div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
+        const camIcon = L.divIcon({ className: 'custom-marker-icon', html: `<div class="relative w-8 h-8 group cursor-pointer"><div class="text-green-500 bg-slate-900 rounded-full p-1 border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)] w-8 h-8 flex items-center justify-center hover:scale-110 transition"><i class="fas fa-video fa-sm"></i></div><div class="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-0.5 bg-black/80 text-white text-[10px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition">CAM-01</div></div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
+        const lprIcon = L.divIcon({ className: 'custom-marker-icon', html: `<div class="relative w-8 h-8 group cursor-pointer"><div class="text-yellow-500 bg-slate-900 rounded-full p-1 border border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)] w-8 h-8 flex items-center justify-center hover:scale-110 transition"><i class="fas fa-car fa-sm"></i></div></div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
+
+        // Map Click Popups (Fixed Image)
+        function createCCTVPopup(title, status, color) {
+            return `<div class="flex flex-col w-full h-full font-sans"><div class="bg-slate-900 px-3 py-2 border-b border-slate-700 flex justify-between items-center"><span class="text-xs font-bold text-white flex items-center gap-2"><i class="fas fa-video text-slate-400"></i> ${title}</span><span class="text-[10px] ${color} font-bold animate-pulse">● ${status}</span></div><div class="relative bg-black h-40 flex items-center justify-center overflow-hidden group"><img src="https://picsum.photos/seed/${title}/300/200" class="absolute inset-0 w-full h-full object-cover opacity-80" alt="CCTV"><div class="absolute top-2 right-2 text-[10px] text-white font-mono bg-black/50 px-1 rounded">2025-10-21 14:30:22</div><div class="absolute bottom-2 left-2 text-[10px] text-green-400 font-bold bg-black/50 px-1 rounded">FPS: 30</div><div class="z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/30 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition duration-300 cursor-pointer hover:bg-white/20 hover:scale-110"><i class="fas fa-expand"></i></div></div><div class="bg-slate-800 p-2 flex justify-between items-center text-slate-400"><button class="text-[10px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-0.5 rounded">PLAY</button></div></div>`;
+        }
+
+        L.marker([36.9950, 127.1150], {icon: fireIcon}).addTo(map).bindPopup(createCCTVPopup('CAM-03: 소사벌 레포츠타운 (Fire)', 'ALARM', 'text-red-500'));
+        L.marker([36.9923, 127.1126], {icon: camIcon}).addTo(map).bindPopup(createCCTVPopup('CAM-01: 평택시청 광장', 'LIVE', 'text-green-500'));
+        L.marker([36.9900, 127.1180], {icon: lprIcon}).addTo(map).bindPopup(createCCTVPopup('CAM-04: 평택역 인근 도로', 'LPR', 'text-yellow-500'));
+
+        // --- REAL DISASTER ALERT GENERATOR ---
+        const eventLogContainer = document.getElementById('eventLog');
+        const alertScenarios = [
+            { agency: '[행정안전부]', title: '폭염경보 발효', msg: '오늘 10:00 경기(평택) 폭염경보. 야외활동 자제, 충분한 수분 섭취 등 건강관리에 유의바랍니다.', icon: 'fa-sun text-red-500', color: 'border-red-500' },
+            { agency: '[평택시청]', title: '실종자 찾기', msg: '평택시에서 실종된 박OO(남, 75세)씨를 찾습니다. 165cm, 회색점퍼. 목격 시 제보 바랍니다.', icon: 'fa-user-injured text-yellow-500', color: 'border-yellow-500' },
+            { agency: '[환경부]', title: '미세먼지 비상', msg: '수도권 미세먼지 비상저감조치 시행 중. 차량 2부제 동참 및 마스크 착용 권고.', icon: 'fa-smog text-gray-400', color: 'border-slate-500' },
+            { agency: '[산림청]', title: '산불재난 주의', msg: '건조한 날씨로 화재 위험이 높습니다. 산림 인접지 소각행위 금지 등 불씨 관리에 철저를 기해주시기 바랍니다.', icon: 'fa-fire text-orange-500', color: 'border-orange-500' },
+            { agency: '[한강홍수통제소]', title: '홍수주의보 해제', msg: '진위천(평택시 동연교) 홍수주의보 해제. 수위가 안정권에 접어들었습니다.', icon: 'fa-water text-blue-400', color: 'border-blue-500' }
+        ];
+
+        function addAlert() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ko-KR', { hour12: false });
+            const alert = alertScenarios[Math.floor(Math.random() * alertScenarios.length)];
+            
+            const eventHTML = `
+                <div class="relative rounded-lg border-l-4 ${alert.color} bg-slate-800 p-3 shadow-sm animate-slide-in-right transition hover:brightness-110 flex-shrink-0">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-xs font-bold text-white flex items-center gap-1">
+                            <i class="fas ${alert.icon}"></i> ${alert.agency}
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-mono">${timeStr}</span>
+                    </div>
+                    <div class="text-xs font-bold text-slate-200 mb-1">${alert.title}</div>
+                    <div class="text-[11px] text-slate-400 leading-tight">${alert.msg}</div>
+                </div>
+            `;
+            if (eventLogContainer) {
+                eventLogContainer.insertAdjacentHTML('afterbegin', eventHTML);
+                if (eventLogContainer.firstElementChild) eventLogContainer.firstElementChild.classList.add('animate-flash');
+                if (eventLogContainer.children.length > 20) eventLogContainer.removeChild(eventLogContainer.lastChild);
+            }
+        }
+        for(let i=0; i<3; i++) addAlert();
+        setInterval(addAlert, 5000); // New alert every 5 sec
+
+        // --- Snapshot Generator (Fixed Images) ---
+        const snapshotContainer = document.getElementById('snapshotContainer');
+        const snapTypes = [{ type: 'FIRE', color: 'bg-red-600', img: 'https://picsum.photos/seed/fire/200', cam: 'CAM-03' }, { type: 'LPR', color: 'bg-yellow-600', img: 'https://picsum.photos/seed/car/200', cam: 'CAM-04' }, { type: 'INTRUSION', color: 'bg-blue-600', img: 'https://picsum.photos/seed/intruder/200', cam: 'CAM-08' }];
+        function addSnapshot() {
+            const now = new Date(); const timeStr = now.toLocaleTimeString('ko-KR', { hour12: false }); const item = snapTypes[Math.floor(Math.random() * snapTypes.length)]; const conf = Math.floor(Math.random() * (99 - 85) + 85);
+            const snapHTML = `<div class="relative w-40 h-32 bg-slate-800 rounded-lg overflow-hidden border border-slate-700 flex-shrink-0 animate-slide-in-right group cursor-pointer hover:border-blue-500 transition"><img src="${item.img}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition duration-300"><div class="absolute top-0 left-0 ${item.color} text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br shadow-md">${item.type}</div><div class="absolute bottom-0 w-full bg-black/80 backdrop-blur-sm p-1.5 border-t border-slate-600"><div class="flex justify-between items-center text-[10px] text-slate-300 font-mono leading-none mb-1"><span>${timeStr}</span><span class="text-green-400 font-bold">${conf}%</span></div><div class="text-[9px] text-white font-bold truncate">${item.cam}</div></div></div>`;
+            if (snapshotContainer) { snapshotContainer.insertAdjacentHTML('afterbegin', snapHTML); if (snapshotContainer.children.length > 10) snapshotContainer.removeChild(snapshotContainer.lastChild); }
+        }
+        for(let i=0; i<5; i++) addSnapshot(); setInterval(addSnapshot, 5000);
+
+        // --- Report System Logic ---
+        const reportData = {
+            PATROL: [ { title: "[정기] 09:00 본관 내부 순찰", time: "09:30:15", status: "완료", content: "## 📋 오전 정기 순찰 보고\n\n**순찰 구역:** 평택시청 본관 1~3층\n**특이사항:** 없음" }, { title: "[수시] 11:30 주차장 외곽 점검", time: "11:45:22", status: "특이", content: "## 🚧 주차장 시설 점검 보고\n\n**순찰 구역:** 지하 주차장 B구역" } ],
+            INCIDENT: [ { title: "🚨 화재 경보 (소사벌 레포츠)", time: "14:12:33", status: "처리중", content: "## 🔥 긴급 화재 경보 발생\n\n**발생장소:** 소사벌 레포츠타운 야외 공연장 인근" } ]
+        };
+        let currentReportType = 'PATROL';
+        function openReportSystem(type) {
+            currentReportType = type;
+            const modal = document.getElementById('reportModal'); const title = document.getElementById('modalTitle'); const iconBg = document.getElementById('modalIconBg'); const contentArea = document.getElementById('reportContentArea'); const viewActionBar = document.getElementById('viewActionBar');
+            contentArea.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-50"><i class="fas fa-mouse-pointer text-4xl mb-4"></i><p>항목을 선택하거나 [+] 버튼으로 작성하세요.</p></div>`;
+            viewActionBar.classList.add('hidden');
+            if(type === 'PATROL') { title.innerText = "일일 순찰 리포트"; iconBg.className = "w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center shadow-lg"; iconBg.innerHTML = '<i class="fas fa-user-shield text-white text-lg"></i>'; renderList(reportData.PATROL); } 
+            else { title.innerText = "중요 사건 사고 리포트"; iconBg.className = "w-10 h-10 rounded-lg bg-red-600 flex items-center justify-center shadow-lg"; iconBg.innerHTML = '<i class="fas fa-exclamation-triangle text-white text-lg"></i>'; renderList(reportData.INCIDENT); }
+            modal.classList.remove('hidden');
+        }
+        function renderList(data) {
+            const listContainer = document.getElementById('reportList'); listContainer.innerHTML = '';
+            data.forEach(item => {
+                const el = document.createElement('div'); el.className = "p-3 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 cursor-pointer transition flex flex-col gap-1 group"; el.onclick = () => showReportDetail(item, el);
+                let statusColor = "bg-slate-600"; if(item.status === '완료') statusColor = "bg-green-600"; if(item.status === '처리중') statusColor = "bg-red-600"; if(item.status === '특이') statusColor = "bg-yellow-600";
+                el.innerHTML = `<div class="flex justify-between items-center"><span class="text-xs text-slate-400 font-mono">${item.time}</span><span class="text-[10px] text-white px-1.5 rounded ${statusColor}">${item.status}</span></div><div class="text-sm font-bold text-slate-200 group-hover:text-white truncate">${item.title}</div>`;
+                listContainer.appendChild(el);
+            });
+        }
+        function showReportDetail(item, element) {
+            const listItems = document.getElementById('reportList').children; for(let li of listItems) li.classList.remove('border-blue-500', 'bg-slate-700'); element.classList.add('border-blue-500', 'bg-slate-700');
+            const contentArea = document.getElementById('reportContentArea'); contentArea.innerHTML = marked.parse(item.content); document.getElementById('viewActionBar').classList.remove('hidden');
+        }
+        function showCreateForm() {
+            const contentArea = document.getElementById('reportContentArea'); document.getElementById('viewActionBar').classList.add('hidden');
+            contentArea.innerHTML = `<div class="max-w-2xl mx-auto space-y-4 animate-fade-in"><h3 class="text-lg font-bold text-white border-b border-slate-700 pb-2">새 보고서 작성 (${currentReportType})</h3><div><label class="block text-xs text-slate-400 mb-1">제목</label><input type="text" id="newTitle" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white focus:border-blue-500 outline-none" placeholder="보고서 제목 입력"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-xs text-slate-400 mb-1">발생 시간</label><input type="text" id="newTime" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white font-mono" value="${new Date().toLocaleTimeString('ko-KR', {hour12:false})}"></div><div><label class="block text-xs text-slate-400 mb-1">상태</label><select id="newStatus" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white outline-none"><option value="완료">완료</option><option value="처리중">처리중</option><option value="특이">특이사항</option></select></div></div><div><label class="block text-xs text-slate-400 mb-1">상세 내용 (Markdown 지원)</label><textarea id="newContent" class="w-full h-48 bg-slate-700 border border-slate-600 rounded p-2 text-white focus:border-blue-500 outline-none resize-none" placeholder="내용을 입력하세요..."></textarea></div><div class="flex justify-end gap-2 pt-2"><button onclick="openReportSystem(currentReportType)" class="px-4 py-2 bg-slate-600 text-white rounded hover:bg-slate-500">취소</button><button onclick="saveReport()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold shadow-lg">저장</button></div></div>`;
+        }
+        function saveReport() {
+            const title = document.getElementById('newTitle').value; const time = document.getElementById('newTime').value; const status = document.getElementById('newStatus').value; const content = document.getElementById('newContent').value;
+            if(!title || !content) { alert('제목과 내용을 입력해주세요.'); return; }
+            const newReport = { title, time, status, content: "## " + title + "\n\n" + content };
+            if(currentReportType === 'PATROL') reportData.PATROL.unshift(newReport); else reportData.INCIDENT.unshift(newReport);
+            const listContainer = document.getElementById('reportList'); listContainer.innerHTML = ''; const targetData = currentReportType === 'PATROL' ? reportData.PATROL : reportData.INCIDENT;
+            renderList(targetData); setTimeout(() => { if(listContainer.firstChild) listContainer.firstChild.click(); }, 50);
+        }
+        function closeReportModal() { document.getElementById('reportModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>

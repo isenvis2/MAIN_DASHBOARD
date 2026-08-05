@@ -1,0 +1,41 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+import "axxonsoft/bl/security/ObjectsPermissions.proto";
+
+message GroupPermissions
+{
+    ECameraAccess camera_access = 1;
+    EMicrophoneAccess microphone_access = 2;
+    ETelemetryPriority telemetry_priority = 3;
+}
+
+message RoleBasedGroupsPermissions
+{
+    string role_id = 1;
+    map<string /* group_id */, GroupPermissions> groups_permissions = 2;
+}
+
+message ListGroupsPermissionsRequest
+{
+    repeated string role_ids = 1;
+    repeated string group_ids = 2;
+}
+
+message ListGroupsPermissionsResponse
+{
+    repeated RoleBasedGroupsPermissions permissions = 1;
+    repeated string not_found_groups = 2;
+}
+
+message SetGroupsPermissionsRequest
+{
+    repeated RoleBasedGroupsPermissions permissions = 1;
+}
+
+message SetGroupsPermissionsResponse
+{
+    repeated string not_found_groups = 1;
+}

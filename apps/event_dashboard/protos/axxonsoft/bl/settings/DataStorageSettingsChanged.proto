@@ -1,0 +1,16 @@
+syntax = "proto3";
+package axxonsoft.bl.settings;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/settings";
+
+import "google/protobuf/field_mask.proto";
+
+// Notification about changes in the data storage settings.
+message DataStorageSettingsChanged
+{
+    // Current fingerprint (used for optimistic concurrency).
+    string etag = 1;
+
+    // List of the changed fields.
+    google.protobuf.FieldMask changes = 2;
+}

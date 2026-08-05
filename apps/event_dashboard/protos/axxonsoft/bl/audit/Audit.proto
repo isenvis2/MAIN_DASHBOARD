@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+option go_package = "bitbucket.org/Axxonsoft/bl/audit";
+
+package axxonsoft.bl.audit;
+
+import "google/api/annotations.proto";
+
+message AuditClientResponse
+{
+}
+
+message InjectClientAppOptionEventRequest
+{
+    string group = 1;
+    string setting = 2;
+    string setting_value = 3;
+}
+
+message InjectArchiveViewingEventRequest
+{
+    string camera_ap = 1;
+    string archive_ap = 2;
+}
+
+message InjectCameraViewingEventRequest
+{
+    string camera_ap = 1;
+}
+
+message InjectNgpJournalExportEventRequest
+{
+    string start = 1;
+    string end = 2;
+}
+
+message InjectPtzControlEventRequest
+{
+    string camera_ap = 1;
+}
+
+message InjectMMExportEventRequest
+{
+    string device_ap = 1;
+    string archive_ap = 2;
+    string exported_file_name = 3;
+}
+
+message InjectUserSetupEventRequest
+{
+    string changed_user = 1;
+    string group = 2;
+    string setting = 3;
+    string setting_value = 4;
+}
+
+message InjectRoleSetupEventRequest
+{
+    string changed_role = 1;
+    string group = 2;
+    string setting = 3;
+    string setting_value = 4;
+}
+
+message InjectLdapSetupEventRequest
+{
+    string ldap = 1;
+    string group = 2;
+    string setting = 3;
+    string setting_value = 4;
+}
+
+// Do not use DEPRECATED methods they are do nothing
+service AuditEventInjector
+{
+    rpc InjectClientAppOptionEvent(InjectClientAppOptionEventRequest) returns (AuditClientResponse) {
+        option (google.api.http) = {
+            post: "/v1/audit/injectClientAppOptionEvent"
+            body: "*"
+        };
+    }
+
+    rpc InjectArchiveViewingEvent(InjectArchiveViewingEventRequest) returns (AuditClientResponse) {
+                option (google.api.http) = {
+            post: "/v1/audit/injectArchiveViewingEvent"
+            body: "*"
+        };
+    }
+
+    rpc InjectCameraViewingEvent(InjectCameraViewingEventRequest) returns (AuditClientResponse) {
+                option (google.api.http) = {
+            post: "/v1/audit/injectCameraViewingEvent"
+            body: "*"
+        };
+    }
+
+    rpc InjectNgpJournalExportEvent(InjectNgpJournalExportEventRequest) returns (AuditClientResponse) {
+                option (google.api.http) = {
+            post: "/v1/audit/injectNgpJournalExportEvent"
+            body: "*"
+        };
+    }
+
+    rpc InjectPtzControlEvent(InjectPtzControlEventRequest) returns (AuditClientResponse) {
+                option (google.api.http) = {
+            post: "/v1/audit/injectPtzControlEvent"
+            body: "*"
+        };
+    }
+    
+    // DEPRECATED
+    rpc InjectMMExportEvent(InjectMMExportEventRequest) returns (AuditClientResponse) {
+        option (google.api.http) = {
+            post: "/v1/audit/injectMMExportEvent"
+            body: "*"
+        };
+    }
+
+    // DEPRECATED
+    rpc InjectUserSetupEvent(InjectUserSetupEventRequest) returns (AuditClientResponse) {
+        option (google.api.http) = {
+            post: "/v1/audit/injectUserSetupEvent"
+            body: "*"
+        };
+    }
+
+    // DEPRECATED
+    rpc InjectRoleSetupEvent(InjectRoleSetupEventRequest) returns (AuditClientResponse) {
+        option (google.api.http) = {
+            post: "/v1/audit/injectRoleSetupEvent"
+            body: "*"
+        };
+    }
+
+    // DEPRECATED
+    rpc InjectLdapSetupEvent(InjectLdapSetupEventRequest) returns (AuditClientResponse) {
+        option (google.api.http) = {
+            post: "/v1/audit/injectLdapSetupEvent"
+            body: "*"
+        };
+    }
+}

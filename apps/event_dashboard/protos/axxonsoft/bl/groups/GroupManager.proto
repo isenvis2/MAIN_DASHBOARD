@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package axxonsoft.bl.groups;
+option go_package = "bitbucket.org/Axxonsoft/bl/groups";
+
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+
+import "axxonsoft/bl/security/GroupsPermissions.proto";
+
+enum EViewMode
+{
+    VIEW_MODE_DEFAULT = 0;
+    VIEW_MODE_TREE = 1;
+}
+
+message Group
+{
+    // GUID formated like: "b9cdc301-19de-f14b-9580-b674a467ea36"
+    string group_id = 1;
+    string name = 2;
+    string description = 3;
+    string parent = 4;
+    repeated Group groups = 5;
+    security.GroupPermissions permissions = 6;
+}
+
+message Membership
+{
+    string group_id = 1;
+    string object = 2;
+}
+
+message SetObjectsMembershipRequest
+{
+    // Add or/and delete object(s) from certain group.
+    repeated Membership added_objects = 1;
+    repeated Membership removed_objects = 2;
+}
+
+message SetObjectsMembershipResponse
+{
+    repeated Membership failed_added_objects = 1;
+    repeated Membership failed_removed_objects = 2;
+}
+
+message ChangeGroupsRequest
+{
+    repeated string removed_groups = 1;	
+    repeated Group changed_groups_info = 2;
+	
+    // Add new groups with associated objects.
+    repeated Group added_groups = 3;
+}
+
+message ListGroupsRequest
+{
+    EViewMode view = 1;
+}
+
+message ListGroupsResponse
+{
+    repeated Group groups = 1;
+}
+
+message BatchGetGroupsRequest
+{
+    repeated string group_ids = 1;
+    bool with_sub_groups = 2;
+}
+
+message BatchGetGroupsResponse
+{
+    repeated Group groups = 1;
+    repeated string not_found_groups = 2;
+}
+
+service GroupManager
+{
+    rpc ListGroups(ListGroupsRequest) returns (ListGroupsResponse) {
+        option (google.api.http) = {
+            get: "/v1/groups/list"
+        };
+    }
+	
+    rpc BatchGetGroups(BatchGetGroupsRequest) returns (BatchGetGroupsResponse) {
+        option (google.api.http) = {
+            get: "/v1/groups:batchGet"
+        };
+    }
+	
+    rpc ChangeGroups(ChangeGroupsRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v1/groups:change"
+            body: "*"
+        };
+    }
+	
+    rpc SetObjectsMembership(SetObjectsMembershipRequest) returns (SetObjectsMembershipResponse) {
+        option (google.api.http) = {
+            post: "/v1/groups/membership"
+            body: "*"
+        };
+    }
+}

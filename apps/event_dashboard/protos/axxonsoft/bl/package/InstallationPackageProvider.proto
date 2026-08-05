@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package axxonsoft.bl.package;
+
+import "google/api/annotations.proto";
+
+option go_package = "bitbucket.org/Axxonsoft/bl/package";
+
+service InstallationPackageProvider
+{
+    rpc CheckPackageAvailability (CheckPackageAvailabilityRequest) returns (CheckPackageAvailabilityResponse);
+    rpc DownloadInstallerPackage(DownloadInstallerPackageRequest) returns (stream DownloadInstallerPackageResponse);
+}
+
+message CheckPackageAvailabilityRequest
+{
+    enum OperationSystem
+    {
+        Windows = 0;
+        Linux = 1;
+    }
+    OperationSystem system = 1;
+    string machine = 2;
+}
+
+message CheckPackageAvailabilityResponse
+{
+    string package_id = 1;
+    string product_name = 2;
+    string package_version = 3;
+    uint64 package_size_bytes = 4;
+}
+
+message DownloadInstallerPackageRequest
+{
+    string package_id = 1;
+    // Recommended chunk size appears to be 16-64 KiB.
+    // But beware, by default, gRPC limits incoming messages to 4 MB.
+    uint64 chunk_size_kb = 2;
+    uint64 start_from_chunk_index = 3;
+}
+
+message DownloadInstallerPackageResponse
+{
+    uint64 index = 1;
+    bytes data = 2;
+}

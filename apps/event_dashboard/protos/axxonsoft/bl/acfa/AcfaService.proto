@@ -1,0 +1,356 @@
+syntax = "proto3";
+package axxonsoft.bl.acfa;
+option go_package = "bitbucket.org/Axxonsoft/bl/acfa";
+
+import "google/protobuf/wrappers.proto";
+
+message RangeConstraint
+{
+    // Minimum property value.
+    oneof min {
+        int32 min_int = 1;
+        double min_double = 2;
+        int64 min_int64 = 3;
+        uint64 min_uint64 = 4;
+    };
+    // Maximum property value
+    oneof max {
+        int32 max_int = 10;
+        double max_double = 11;
+        int64 max_int64 = 12;
+        uint64 max_uint64 = 13;
+    };
+
+    // Default property value
+    oneof default {
+        int32 default_int = 20;
+        double default_double = 21;
+        int64 default_int64 = 22;
+        uint64 default_uint64 = 23;
+    };
+}
+
+message PropertyDescriptorGroup
+{
+    repeated PropertyDescriptor properties = 1;
+}
+
+message EnumerationConstraintsItem
+{
+    // A localization key (user-friendly name) for this value.
+    string name = 1;
+    // Actual item value
+    oneof value {
+        string value_string = 20;
+        int32 value_int32 = 21;
+        double value_double = 22;
+        bool value_bool = 23;
+        int64 value_int64 = 24;
+        uint64 value_uint64 = 25;
+        PropertyDescriptorGroup value_property_group = 26;
+    }
+
+    // A set of properties that characterize a value.
+    repeated PropertyDescriptor traits = 2;
+    // Nested (dependent) properties descriptor.
+    repeated PropertyDescriptor properties = 50;
+}
+
+message EnumerationConstraints
+{
+    // A list of possible values along with properties, active when particular item value is selected.
+    repeated EnumerationConstraintsItem items = 1;
+
+    oneof default {
+        string default_string = 20;
+        int32 default_int32 = 21;
+        double default_double = 22;
+        bool default_bool = 23;
+        int64 default_int64 = 24;
+        uint64 default_uint64 = 25;
+        PropertyDescriptorGroup value_property_group = 26;
+    }
+}
+
+message PropertyDescriptor
+{
+    reserved 24 to 27, 30 to 39;
+
+    // Property identifier.
+    string id = 1;
+    // Property display name. If this attribute is absent, then id is used instead.
+    string name = 2;
+    // Property description (if any).
+    string description = 5;
+    // Specifies the name of the category in which to group the property when displayed.
+    string category = 8;
+    // Property type: string, int32, double, bool and so on.
+    string type = 3;
+    // Whether this param is read-only.
+    bool readonly = 4;
+    // Auxiliary flag for service use by clients.
+    // Indicates that client should hide this property from users.
+    bool internal = 6;
+    // Localized (user-friendly) value.
+    // If not empty, should be displayed instead of actual value.
+    google.protobuf.StringValue display_value = 7;
+
+    oneof value {
+        string value_string = 20;
+        int32 value_int32 = 21;
+        double value_double = 22;
+        bool value_bool = 23;
+        int64 value_int64 = 28;
+        uint64 value_uint64 = 29;
+        PropertyDescriptorGroup value_properties = 49;
+    }
+
+    oneof constraints {
+        RangeConstraint range_constraint = 50;
+        EnumerationConstraints enum_constraint = 51;
+    }
+}
+
+message ListUnitsActionsRequest
+{
+    message Unit
+    {
+        string uid = 1;
+    }
+
+    repeated Unit items = 1;
+    int32 portion_size = 2;
+}
+
+// Action defines operation that can be performed by device/unit
+message Action
+{
+    // Action identifier.
+    string id = 1;
+    string name = 2;
+    // input parameters of action
+    repeated PropertyDescriptor input = 3;
+    // output parameters of action
+    repeated PropertyDescriptor output = 4;
+}
+
+message ListUnitsActionsResponse
+{
+    message UnitAction
+    {
+        string uid = 1;
+        repeated Action actions = 2;
+    }
+
+    repeated UnitAction items = 1;
+    bool more_data = 2;
+}
+
+message ListUnitsVisualizationsRequest
+{
+    message Unit
+    {
+        string uid = 1;
+    }
+
+    repeated Unit items = 1;
+    int32 portion_size = 2;
+}
+
+message Icon
+{
+    string id = 1;
+    string image = 2;
+}
+
+message IconGroup
+{
+    repeated Icon items = 1;
+}
+
+message Line
+{
+    string id = 1;
+    string color = 2;
+    string width = 3;
+    string pattern = 4;
+}
+
+message LineGroup
+{
+    repeated Line items = 1;
+}
+
+message Area
+{
+    string id = 1;
+    string color = 2;
+    string pattern = 3;
+}
+
+message AreaGroup
+{
+    repeated Area items = 1;
+}
+
+message Text
+{
+    string id = 1;
+}
+
+message TextGroup
+{
+    repeated string items = 1;
+}
+
+// Visualisation defines how unit is displayed on the map
+message Visualization 
+{
+	string id = 1;
+	string name = 2;
+
+    oneof value {
+        IconGroup icons = 10;
+        LineGroup lines = 11;
+        AreaGroup areas = 12;
+        TextGroup texts = 13;
+    }
+}
+
+message ListUnitsVisualizationsResponse
+{
+    message UnitVisualizations
+    {
+        string uid = 1;
+        repeated Visualization visualizations = 2;
+    }
+
+    repeated UnitVisualizations items = 1;
+    bool more_data = 2;
+}
+
+message ListUnitsEventsRequest
+{
+    message Unit
+    {
+        string uid = 1;
+    }
+
+    repeated Unit items = 1;
+    int32 portion_size = 2;
+}
+
+// Event defines event that can be sent by device/unit
+message Event
+{
+    // Event identifier.
+    string id = 1;
+    // Event display name. If this attribute is absent, then id is used instead.
+    string name = 2;
+    // parameters of event, that can be sent by unit, if any
+    repeated PropertyDescriptor params = 4;
+}
+
+message ListUnitsEventsResponse
+{
+    message UnitEvents
+    {
+        string uid = 1;
+        repeated Event events = 2;
+    }
+
+    repeated UnitEvents items = 1;
+    bool more_data = 2;
+}
+
+message ListUnitsStatesRequest
+{
+    enum EStatesMode
+    {
+        SM_ALL = 0; // to get all possible states for unit
+        SM_CURRENT = 1; // to get current states of unit.
+    }
+
+    message Unit
+    {
+        string uid = 1;
+        EStatesMode mode = 2;
+    }
+
+    repeated Unit items = 1;
+    int32 portion_size = 2;
+}
+
+// State defines state of unit. state can be active or not, active state is displayed on the map
+message State
+{
+    enum EStateType
+    {
+        ST_NORMAL = 0;
+        ST_WARNING = 1;
+        ST_ALARM = 2;
+        ST_FAILURE = 3;
+    }
+
+    string id = 1;
+    string name = 2;
+    EStateType type = 3;
+}
+
+message ListUnitsStatesResponse
+{
+    message UnitStates
+    {
+        string uid = 1;
+        repeated State states = 2;
+    }
+
+    repeated UnitStates items = 1;
+    bool more_data = 2;
+}
+
+message PerformActionRequest
+{
+    // Guid of object (device or unit guid), that should perform requested method.
+    string uid = 1;
+    // Action id.
+    string id = 2;
+    // Action input params, see ActionsListResponse and AcquireSettingsResponse for details
+    repeated PropertyDescriptor properties = 3;
+}
+
+message PerformActionResponse
+{
+    // empty if successed
+    string error_message = 1;
+    // action output params, if any
+    repeated PropertyDescriptor properties = 2;
+}
+
+message DownloadDataRequest
+{
+    string uid = 1;
+    // usually fileID is relative image file name, from image property of visualisation
+    repeated string data_id = 2;
+}
+
+message DownloadDataResponse
+{
+    bytes data = 1;
+    string data_id = 2;
+}
+
+service AcfaService
+{
+    rpc ListUnitsActions(ListUnitsActionsRequest) returns (stream ListUnitsActionsResponse);
+
+    rpc ListUnitsVisualizations(ListUnitsVisualizationsRequest) returns (stream ListUnitsVisualizationsResponse);
+
+    rpc ListUnitsEvents(ListUnitsEventsRequest) returns (stream ListUnitsEventsResponse);
+
+    rpc ListUnitsStates(ListUnitsStatesRequest) returns (stream ListUnitsStatesResponse);
+
+    rpc PerformAction(PerformActionRequest) returns (PerformActionResponse);
+
+    rpc DownloadData(DownloadDataRequest) returns (stream DownloadDataResponse);
+}

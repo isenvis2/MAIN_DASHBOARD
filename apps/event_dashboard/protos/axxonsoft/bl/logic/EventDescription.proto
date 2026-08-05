@@ -1,0 +1,83 @@
+syntax = "proto3";
+package axxonsoft.bl.logic;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/logic";
+
+import "axxonsoft/bl/logic/Macro.proto";
+
+message FieldValue
+{
+    oneof type
+    {
+        string string_value = 20;
+        int32 int32_value = 21;
+        double double_value = 22;
+    }
+}
+
+message EnumerationConstraintsItem
+{
+    // A localized string for this value.
+    string name = 1;
+
+    FieldValue value = 2;
+}
+
+message EnumerationConstraints
+{
+    // A list of possible values
+    repeated EnumerationConstraintsItem items = 1;
+}
+
+message ListedItemFieldAttribute
+{
+}
+
+
+// Additional characteristic of a field.
+message FieldAttribute 
+{
+    oneof attribute 
+    {
+        //Field value is an item in list
+        ListedItemFieldAttribute listed_item = 1;
+    }
+}
+
+message FieldDescriptor
+{
+    // Field identifier.
+    string id = 1;
+    // Field display name. If this attribute is absent, then id is used instead.
+    string name = 2;
+    // Field type: string, int32, double, bool and so on.
+    string type = 3;
+
+    // Additional characteristics of the property.
+    repeated FieldAttribute attributes = 4;
+
+    oneof constraints 
+    {
+        EnumerationConstraints enum_constraint = 50;
+    }
+}
+
+message EventDescriptor
+{
+    repeated FieldDescriptor fields = 1;
+}
+
+message GetEventGroupingTagsRequest
+{
+    MacroCondition condition = 1;
+}
+
+message GetEventGroupingTagsResponse
+{
+    EventDescriptor tags = 1;
+}
+
+service EventDescription
+{
+    rpc GetEventGroupingTags(GetEventGroupingTagsRequest) returns (GetEventGroupingTagsResponse);
+}

@@ -1,0 +1,78 @@
+syntax = "proto3";
+package axxonsoft.bl.settings;
+
+import "axxonsoft/bl/settings/DataStorageSettings.proto";
+import "axxonsoft/bl/settings/ExportSettings.proto";
+import "google/protobuf/field_mask.proto";
+
+option go_package = "bitbucket.org/Axxonsoft/bl/settings";
+
+// Service for configuring domain-wide settings.
+service DomainSettingsService
+{
+    // Gets the data storage settings.
+    rpc GetDataStorageSettings(GetDataStorageSettingsRequest) returns (DataStorageSettings);
+
+    // Updates the data storage settings.
+    // Emits a DataStorageSettingsChanged event.
+    rpc UpdateDataStorageSettings(UpdateDataStorageSettingsRequest) returns (DataStorageSettings);
+
+    // Gets the data storage settings.
+    rpc GetExportSettings(GetExportSettingsRequest) returns (GetExportSettingsResponse);
+
+    // Updates the export settings.
+    // Emits a ExportSettingsChanged event.
+    rpc UpdateExportSettings(UpdateExportSettingsRequest) returns (UpdateExportSettingsResponse);
+}
+
+// The parameters to `GetSettings`.
+message GetDataStorageSettingsRequest
+{
+}
+
+// The parameters to `UpdateSettings`.
+message UpdateDataStorageSettingsRequest
+{
+    // Storage settings to update.
+    DataStorageSettings data_storage_settings = 1;
+
+    // List of fields to be updated.
+    google.protobuf.FieldMask update_mask = 2;
+}
+
+// The request to get export settings.
+message GetExportSettingsRequest
+{
+    // List of fields to return
+    google.protobuf.FieldMask mask = 1;
+}
+
+// Get export settings response.
+message GetExportSettingsResponse
+{
+    // Export settings
+    ExportSettings settings = 1;
+
+    // config tag
+    string etag = 2;
+}
+
+// The request to update export settings.
+message UpdateExportSettingsRequest
+{
+    // Export settings
+    ExportSettings settings = 1;
+
+    // List of fields to be updated
+    google.protobuf.FieldMask mask = 2;
+
+    // config tag
+    string etag = 3;
+}
+
+// Update export settings response.
+message UpdateExportSettingsResponse
+{
+    // config tag
+    string etag = 1;
+}

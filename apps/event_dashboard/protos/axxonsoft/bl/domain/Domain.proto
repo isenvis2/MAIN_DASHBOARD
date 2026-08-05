@@ -1,0 +1,981 @@
+syntax = "proto3";
+package axxonsoft.bl.domain;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/domain";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+import "axxonsoft/bl/ptz/TelemetryHelper.proto";
+import "axxonsoft/bl/security/ObjectsPermissions.proto";
+import "axxonsoft/bl/events/Events.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+
+message VideoStreaming
+{
+    string stream_acess_point = 1;
+    string decoder_acess_point = 2;
+    bool enabled = 3;
+    string display_name = 4;
+    string display_id = 5;
+
+    // Framerate (configured)
+    int32 fps = 6;
+
+    bool is_activated = 25;
+}
+
+message AudioStreaming
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    security.EMicrophoneAccess microphone_access = 4;
+    bool is_activated = 5;
+    bool enabled = 6;
+}
+
+enum PlayMode
+{
+    PLAY_MODE_NONE = 0;
+    PLAY_MODE_ONCLIENT = 1;
+    PLAY_MODE_ONSERVER = 2;
+}
+
+message AudioPlayer
+{
+    string state_control_ap = 1;
+    string audio_source_ap = 2;
+    string file_path = 3;
+}
+
+message Speaker
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    string state_control_ap = 4 [deprecated = true];
+    string audio_source_ap = 5 [deprecated = true];
+    repeated AudioPlayer tracks = 8;
+    bool is_activated = 6;
+    bool enabled = 7;
+}
+
+message HostSpeaker
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    string state_control_ap = 4 [deprecated = true];
+    string audio_source_ap = 5 [deprecated = true];
+    bool is_activated = 6;
+    bool enabled = 7;
+    PlayMode play_mode = 8;
+    int32 volume = 9;
+    repeated string audio_files = 10 [deprecated = true];
+    repeated AudioPlayer tracks = 11;
+}
+
+message TelemetryCapabilities
+{
+    ptz.Capabilities move_supported = 1;
+    ptz.Capabilities focus_supported = 2;
+    ptz.Capabilities zoom_supported = 3;
+    ptz.Capabilities iris_supported = 4;
+    bool is_area_zoom_supported = 5;
+    bool is_point_move_supported = 6;
+    int32 maximum_preset_count = 7;
+    bool is_tours_supported = 8;
+
+    enum EFreedom
+    {
+        PAN = 0;
+        TILT = 1;
+        FOCUS = 2;
+        ZOOM = 3;
+        IRIS = 4;
+    }
+    map<int32 /* Use EFreedom here */, ptz.Limits> limits = 10;
+}
+
+message TagAndTrack
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    bool enabled = 4;
+    // TODO: add default Tag&Track priority and so on
+}
+
+message Telemetry
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    security.ETelemetryPriority telemetry_priority = 4;
+    bool enabled = 5;
+
+    TelemetryCapabilities capabilities = 16;
+
+    // Indicates that telemetry controller should imitate discrete movements via continuous commands.
+    bool discrete_over_continuous = 6;
+    string patrol_state_control_access_point = 7;
+
+    // If current PTZ control does not support Tag&Track then
+    // tag_and_track.access_point is empty.
+    TagAndTrack tag_and_track = 17;
+
+    bool is_activated = 25;
+}
+
+// Single archive track
+message StorageSource
+{
+    string access_point = 1;
+    string storage = 2;
+    string binding = 3;
+    string media_source = 4;
+    string origin = 5;
+    string mimetype = 6;
+    string origin_storage = 7;        // origin storage for block replication
+    string origin_storage_source = 8; // origin StorageSource for sample replication
+    int32  prerecording = 9;
+}
+
+// Several logically connected traks
+message ArchiveBinding
+{
+    // Usually camera or source name
+    string name = 1;
+    string storage = 2;
+    Camera camera = 3;
+    Archive archive = 4;
+    bool is_default = 5;
+    bool is_replica = 6 [deprecated = true]; // use has_replica_sources
+    bool is_permanent = 7;
+    bool has_live_sources = 9;
+    bool has_replica_sources = 10;
+    repeated StorageSource sources = 16; 
+}
+
+message Archive
+{
+    string access_point = 1;
+
+    // Indicates that the archive information is incomplete (the server was unable to retrieve it).
+    // It can occur if the archive is bound to a camera, but both are located on different nodes.
+    //
+    // In this case, a client SHOULD explicitly request the actual information about the archive
+    // (e.g. using the `BatchGetArchives` method in BASIC view).
+    bool incomplete = 15;
+
+    string display_name = 2;
+    string display_id = 3;
+    bool is_embedded = 4;
+    security.EArchiveAccess archive_access = 5;
+    repeated ArchiveBinding bindings = 16;
+    bool is_activated = 17;
+    bool enabled = 18;
+}
+
+message SensorSignal
+{
+    string name = 1;
+    message Range
+    {
+        float min = 1;
+        float max = 2;
+    }
+    Range level_limits = 2;
+    // Represents the number of digits after the decimal point that makes sense.
+    int32 precision = 3;
+    // A unit of measurement ("centigrade", "percentage", etc.)
+    string measurement_unit = 4;
+}
+
+message Ray
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    SensorSignal input_signal = 4;
+    bool is_activated = 5;
+    bool enabled = 6;
+}
+
+message Relay
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    bool is_activated = 4;
+    bool enabled = 5;
+}
+
+message TextSource
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    bool enabled = 4;
+}
+
+message SceneDescription
+{
+    string access_point = 1;
+    string mimetype = 2;
+}
+
+message DetectorEventInfo
+{
+    string id = 1;
+    string name = 2;
+    enum EventType
+    {
+        EVENT_TYPE_UNSPECIFIED = 0;
+        ONE_PHASE_EVENT_TYPE = 1;
+        TWO_PHASE_EVENT_TYPE = 2;
+        PERIODICAL_EVENT_TYPE = 3;
+    }
+    EventType event_type = 3;
+}
+
+message Detector
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    string parent_detector = 4;
+    string type = 7;
+    string type_name = 8;
+    bool is_activated = 5;
+    repeated events.EDetectorsGroup groups = 6;
+    repeated SceneDescription scene_descriptions = 16;
+    repeated DetectorEventInfo events = 17;
+    bool enabled = 18;
+    bool is_realtime_recognition_enabled = 19;
+    bool is_recording_objects_tracking_enabled = 20;
+}
+
+message Panomorph
+{
+    bool enabled = 1;
+    bool fit_to_frame = 2;
+    int32 camera_position = 3;
+    int32 view_type = 4;
+    string camera_lens = 5;
+    primitive.Circles fisheye_circles = 6;
+}
+
+message AlternativeView
+{
+    string alternative_camera_name = 1;
+    string second_alternative_camera_name = 2;
+}
+
+message Camera
+{
+    string access_point = 1;
+
+    // Indicates that the camera information is incomplete (the server was unable to retrieve it).
+    // It can occur if the camera is bound to an archive, but both are located on different nodes.
+    //
+    // In this case, a client SHOULD explicitly request the actual information about the camera
+    // (e.g. using the `BatchGetCameras` method in BASIC view).
+    bool incomplete = 15;
+
+    string display_name = 2;
+    string display_id = 3;
+    string ip_address = 5;
+    security.ECameraAccess camera_access = 6;
+    string vendor = 7;
+    string model = 8;
+    string firmware = 34;
+    string comment = 9;
+    bool armed = 10;
+    string geo_location_latitude = 11;
+    string geo_location_longitude = 12;
+    string geo_location_azimuth = 13;
+    bool breaks_unused_connections = 14;
+    string serial_number = 33;
+
+    repeated VideoStreaming video_streams = 16;
+    repeated AudioStreaming microphones = 17;
+    repeated Telemetry ptzs = 18;
+    repeated ArchiveBinding archive_bindings = 19;
+    repeated Ray ray = 20;
+    repeated Relay relay = 21;
+    // Live detectors
+    repeated Detector detectors = 22;
+    // Offline analytics
+    repeated Detector offline_detectors = 23;
+    repeated string group_ids = 24;
+
+    bool is_activated = 25;
+    repeated TextSource text_sources = 26;
+    repeated Speaker speakers = 27;
+    bool enabled = 28;
+
+    Panomorph panomorph = 29;
+    int32 video_buffer_size = 30;
+    bool video_buffer_enabled = 31;
+    AlternativeView alternative_view = 32;
+
+    reserved 4;
+    reserved "version";
+}
+
+// Represents an IP device that has no video streams (i.e. non-camera device)
+message CommonDevice
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    string ip_address = 5;
+
+    string vendor = 7;
+    string model = 8;
+    string firmware = 30;
+
+    string geo_location_latitude = 11;
+    string geo_location_longitude = 12;
+    string geo_location_azimuth = 13;
+    bool breaks_unused_connections = 14;
+    string serial_number = 29;
+
+    repeated AudioStreaming microphones = 17;
+    repeated Telemetry ptzs = 18;
+    repeated ArchiveBinding archive_bindings = 19;
+    repeated Ray ray = 20;
+    repeated Relay relay = 21;
+
+    bool is_activated = 25;
+    repeated TextSource text_sources = 26;
+    repeated Speaker speakers = 27;
+    bool enabled = 28;
+
+    reserved 4;
+    reserved "version";
+}
+
+message Component
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+
+    bool is_activated = 6;
+    bool enabled = 7;
+    oneof detail {
+        Ray ray = 9;
+        Relay relay = 10;    
+        Speaker speaker = 11;
+        HostSpeaker host_speaker = 8;
+        AudioStreaming microphone = 12;
+        Detector detector = 13;
+        TextSource text_source = 14;
+        VideoStreaming video_streaming = 15;
+        Telemetry telemetry = 16;
+    }
+}
+
+message ControlPanel
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    string vendor = 4;
+    string model = 5;
+    bool is_activated = 6;
+    bool enabled = 7;
+
+    message Properties
+    {
+        // Information about control panel's axes, where:
+        //  key   - axis id (e.g. "pan", "tilt", "zoom" etc.)
+        //  value - localization name
+        map<string, string> axes = 1;
+        // Information about control panel's buttons, where:
+        //  key   - button number
+        //  value - localization name
+        map<int32, string> buttons = 2;
+    }
+    Properties properties = 16;
+}
+
+enum EViewMode
+{
+    // Server response includes only basic camera or archive info, with no sub components
+    // (like Telemetry, Audio, VideoStreaming or StorageSource) in collection.
+    // As for control panels, theirs properties will be omitted (supported axes and buttons).
+    VIEW_MODE_NO_CHILD_OBJECTS = 0;
+
+    // Full representation of a camera or an archive with all sub-components.
+    VIEW_MODE_FULL = 1;
+}
+
+enum ESystemIntegrityState
+{
+    SI_UNKNOWN = 0;
+    SI_COMPROMISED = 1;
+    SI_TRUSTED = 2;
+}
+
+enum ESystemIntegrityFileError
+{
+    SI_FILE_NOT_FOUND = 0;
+    SI_FILE_MODIFIED = 1;
+    SI_FILE_FORBIDDEN = 2;
+}
+
+enum EComponentType
+{
+    CT_UNSPECIFIED = 0;
+    CT_RAY = 1;
+    CT_RELAY = 2;
+    CT_SPEAKER = 3;
+    CT_HOST_SPEAKER = 4;
+    CT_MICROPHONE = 5;
+    CT_EXPORT_AGENT = 6;
+    CT_EMAIL_MODULE = 7;
+    CT_GSM_MODULE = 8;
+    CT_DETECTOR = 9;
+    CT_TEXT_SOURCE = 10;
+    CT_VIDEO_STREAMING = 11;
+    CT_TELEMETRY = 12;
+}
+
+message GetVersionRequest
+{
+}
+
+message GetVersionResponse
+{
+    string Version = 1;
+}
+
+message GetHostPlatformInfoRequest
+{
+    // Name of node which provides platform information.
+    // If node_name is empty current node provides platform information.
+    string node_name = 1;
+}
+
+message SystemIntegrityInfo
+{
+    string file_path = 1;
+    ESystemIntegrityFileError file_error_type = 2;
+}
+
+message VendorInfo
+{
+    string vendor_name = 1;
+    string product_name = 2;
+}
+
+message GetHostPlatformInfoResponse
+{
+    string os_sys_name = 1;
+    string os_release = 2;
+    string os_version = 3;
+    string os_machine = 4;
+    string computer_name = 5;
+    string server_version = 6;
+    repeated SystemIntegrityInfo host_system_integrity_info = 7;
+    ESystemIntegrityState host_system_integrity_state = 8;
+    VendorInfo vendor_info = 9;
+    map<string, string> additional_info = 16;
+}
+
+message SearchQuery
+{
+    // query text
+    string query = 1;
+
+    // a list of fields to search
+    // use DECORATED_NAME when unset
+    enum SearchField
+    {
+        DECORATED_NAME = 0;
+        DISPLAY_NAME = 1;
+        DISPLAY_ID = 2;
+        COMMENT = 3;
+        ACCESS_POINT = 4;
+    }
+    repeated SearchField search_fields = 2;
+
+    enum SearchType
+    {
+        SUBSTRING = 0;
+        FUZZY = 1;
+    }
+    SearchType search_type = 3;
+
+    // {display_id}
+    // {display_name}
+    // {comment}
+    // {access_point}
+    // when unset "{display_id}.{display_name}" will be used
+    string decorated_name_template = 4;
+}
+
+// Provides meta data along with the search results
+// - score can be used to sort the results and show the best "scoring" (probably best matched) results at the top
+// - mathes provides the indecies of mathched characters in the pattern
+//   (this information then can be used to highlight those characters in the result, etc.)
+//
+// ! Score is only calculated for fuzzy search, normal substring score will always be 0
+// ! Matches are returned for both search types
+//
+// Example:
+// search pattern `dvc1` in search string `1.device_1` will give
+// score = 84, matches = [ 2,4,6,8 ]
+// meaning the characters matched in the original string are `1.d<ev<ic<e_1<` (`<` is an indicator here for visual explanation)
+message SearchMetaData
+{
+    sint32 score = 1;
+    repeated uint64 matches = 2;
+}
+
+message ListCamerasRequest
+{
+    SearchQuery query = 6;
+    EViewMode view = 2;
+    string page_token = 3;
+    int32 page_size = 4;
+
+    // Only filter for cameras in these groups
+    // If empty search will be done for all groups
+    repeated string group_ids = 5;
+
+    // Only filter for cameras in this node
+    // If empty search will be done for all nodes
+    repeated string nodes = 7;
+
+    string filter = 1 [deprecated = true];
+}
+
+message ListCamerasResponse
+{
+    repeated Camera items = 1;
+    string next_page_token = 2;
+    repeated SearchMetaData search_meta_data = 3;
+}
+
+message ResourceLocator
+{
+    enum View
+    {
+        // Default / unset value.
+        // The view will depend on the method.
+        VIEW_UNSPECIFIED = 0;
+    
+        // Include only basic information about the resource (camera, archive, etc).
+        BASIC = 1;
+    
+        // Include everything.
+        FULL = 2;
+    }
+
+    string access_point = 1;
+    View view = 3;
+
+    reserved 2;
+    reserved "version";
+}
+
+message BatchGetCamerasRequest
+{
+    // NOTE: Default view is FULL. 
+    repeated ResourceLocator items = 1;
+}
+
+message GetCamerasByComponentsRequest
+{
+    // NOTE: Default view is FULL. 
+    repeated ResourceLocator items = 1;
+}
+
+message GetCamerasByComponentsResponse
+{
+    repeated Camera items = 1;
+    repeated string not_found_objects = 2;
+    repeated string unreachable_objects = 3;
+}
+
+message BatchGetCamerasResponse
+{
+    repeated Camera items = 1;
+    repeated string not_found_objects = 2;
+    repeated string unreachable_objects = 3;
+}
+
+message BatchGetArchivesRequest
+{
+    // NOTE: Default view is FULL. 
+    repeated ResourceLocator items = 1;
+}
+
+message BatchGetArchivesResponse
+{
+    repeated Archive items = 1;
+    repeated string not_found_objects = 2;
+    repeated string unreachable_objects = 3;
+}
+
+message ListArchivesRequest
+{
+    SearchQuery query = 5;
+    EViewMode view = 2;
+    string page_token = 3;
+    int32 page_size = 4;
+
+    string filter = 1 [deprecated = true];
+}
+
+message ListArchivesResponse
+{
+    repeated Archive items = 1;
+    string next_page_token = 2;
+    repeated SearchMetaData search_meta_data = 3;
+}
+
+message ListControlPanelsRequest
+{
+    SearchQuery query = 5;
+    EViewMode view = 2;
+    string page_token = 3;
+    int32 page_size = 4;
+
+    string filter = 1 [deprecated = true];
+}
+
+message ListControlPanelsResponse
+{
+    repeated ControlPanel items = 1;
+    string next_page_token = 2;
+    repeated SearchMetaData search_meta_data = 3;
+}
+
+message BatchGetControlPanelsRequest
+{
+    // NOTE: Default view is FULL. 
+    repeated ResourceLocator items = 1;
+}
+
+message BatchGetControlPanelsResponse
+{
+    repeated ControlPanel items = 1;
+    repeated string not_found_objects = 2;
+    repeated string unreachable_objects = 3;
+}
+
+message ListCommonDevicesRequest
+{
+    SearchQuery query = 5;
+    EViewMode view = 2;
+    string page_token = 3;
+    int32 page_size = 4;
+
+    string filter = 1 [deprecated = true];
+}
+
+message ListCommonDevicesResponse
+{
+    repeated CommonDevice items = 1;
+    string next_page_token = 2;
+    repeated SearchMetaData search_meta_data = 3;
+}
+
+message BatchGetCommonDevicesRequest
+{
+    // NOTE: Default view is FULL. 
+    repeated ResourceLocator items = 1;
+}
+
+message BatchGetCommonDevicesResponse
+{
+    repeated CommonDevice items = 1;
+    repeated string not_found_objects = 2;
+    repeated string unreachable_objects = 3;
+}
+
+message ListComponentsRequest
+{
+    SearchQuery query = 1;
+    EComponentType component_type = 2;
+    string page_token = 3;
+    int32 page_size = 4;
+    // Only filter for cameras in this node
+    // If empty search will be done for all nodes
+    repeated string nodes = 5;
+    EViewMode view = 6;
+}
+
+message ListComponentsResponse
+{
+    repeated Component items = 1;
+    string next_page_token = 2;
+    repeated SearchMetaData search_meta_data = 3;
+}
+
+message GlobalTracker
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    string mimetype = 4;
+    // access point of endpoint with global tracks
+    // should be used to subscribe to metadata channel using MetadataService
+    string metadata_access_point = 5;
+}
+
+message ListGlobalTrackersRequest
+{
+    SearchQuery query = 6;
+    EViewMode view = 2;
+    string page_token = 3;
+    int32 page_size = 4;
+
+    // filter GlobalTrackers related to any of these maps
+    repeated string map_ids = 5;
+}
+
+message ListGlobalTrackersResponse
+{
+	repeated GlobalTracker items = 1;
+	string next_page_token = 2;
+	repeated SearchMetaData search_meta_data = 3;
+}
+
+message GlobalTrackerDetector
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+    repeated string linked_global_trackers = 4;
+}
+
+message GlobalTrackerCamera
+{
+    string access_point = 1;
+    string display_name = 2;
+    string display_id = 3;
+
+    repeated string map_ids = 4;
+    bool is_calibrated = 5;
+    repeated GlobalTrackerDetector detectors = 6;
+}
+
+message ListGlobalTrackerCamerasRequest
+{
+    SearchQuery query = 6;
+    EViewMode view = 2;
+    string page_token = 3;
+    int32 page_size = 4;
+
+    // Specify GlobalTracker's access point to list only cameras related to it
+    string access_point = 5;
+}
+
+message ListGlobalTrackerCamerasResponse
+{
+    repeated GlobalTrackerCamera items = 1;
+    string next_page_token = 2;
+    repeated SearchMetaData search_meta_data = 3;
+}
+
+message ListNodesRequest
+{
+    // Name of node which provides HostStatus information.
+    // If node_name is empty current node provides HostStatus information.
+    string node_name = 1;
+}
+
+message ListNodesResponse
+{
+    repeated events.HostStatus nodes = 1;
+}
+
+message GetHostTimeZoneRequest
+{
+    // Name of node which provides time zone information.
+    // If node_name is empty current node provides time zone information.
+    string node_name = 1;
+}
+
+message GetHostTimeZoneResponse
+{
+    // time_zone in minutes.
+    int32 time_zone = 1;
+}
+
+enum EAcfaComponentType
+{
+    ACFAUndefined = 0;
+
+    ACFA = 1; // required root unit type
+    ACFAController = 2;
+    ACFALoop = 3;
+    ACFAReader = 4;
+    ACFASensor = 5;
+    ACFARelay = 6;
+    ACFALock = 7;
+    ACFAArea = 8;
+    ACFAGroupArea = 9;
+    ACFAFence = 10;
+}
+
+message InternalType
+{
+    string name = 1;
+    string display_name = 2;
+}
+
+message AcfaComponent
+{
+    string access_point = 1;
+    string parent_access_point = 2;
+    string display_name = 3;
+    string display_id = 4;
+    EAcfaComponentType type = 5;
+    InternalType internal_type = 8;
+    bool is_activated = 6;
+    bool enabled = 7;
+    google.protobuf.BoolValue has_children = 12;
+
+    // Effective access.
+    security.EAcfaAccess access = 9;
+}
+
+message AcfaComponentSearchQuery
+{
+    EAcfaComponentType component_type = 1; // If value 'ACFAUndefined = 0' search any
+    string internal_type = 2; // Unit internal type identifier. If empty search any
+}
+
+message ListAcfaComponentsRequest
+{
+    enum EDisplayMode
+    {
+        VM_DEFAULT = 0; // default view mode of components without relations
+        VM_WITH_RELATIONS = 1; // view mode of components with relations to complete the tree up to the root node
+    }
+
+    // 'query' and 'custom_query' and 'parent_access_point' are combined with each other by the logical 'AND' rule
+    SearchQuery query = 6;
+    AcfaComponentSearchQuery custom_query = 7;
+    // Filter the resulting components by parent access point. If not specified search any.
+    // Specify empty string value to get root nodes.
+    google.protobuf.StringValue parent_access_point = 8; 
+
+    string page_token = 1;
+    int32 page_size = 2;
+    EDisplayMode mode = 3;
+}
+
+message ListAcfaComponentsResponse
+{
+    repeated AcfaComponent items = 1;
+    string next_page_token = 2;
+    repeated SearchMetaData search_meta_data = 3;
+
+    // ACFA equipment is a tree structure with an unknown number of levels, presented here as a list.
+    // In this regard, the 'relations' field will contain the missing element nodes
+    // to complete the full tree up to the root node, if they are not in the 'items'.
+    // Note: This field will only be used with "VM_WITH_RELATIONS" mode in the request.
+    //       Elements from "relations" count towards page size.
+    //       But if the size is exceeded, it will complete the full tree up to the root node.
+    repeated AcfaComponent relations = 4;
+}
+
+message BatchGetAcfaComponentsRequest
+{
+    enum EDisplayMode
+    {
+        VM_DEFAULT = 0; // default view mode of components without relations
+        VM_WITH_RELATIONS = 1; // view mode of components with relations to complete the tree up to the root node
+    }
+
+    // NOTE: Default view (if it's unspecified for an item) depends on the request's mode:  VM_DEFAULT -> BASIC, VM_WITH_RELATIONS -> FULL.
+    repeated ResourceLocator items = 1;
+    EDisplayMode mode = 2;
+}
+
+message BatchGetAcfaComponentsResponse
+{
+    repeated AcfaComponent items = 1;
+    repeated AcfaComponent relations = 2;
+    repeated string not_found_objects = 3;
+    repeated string unreachable_objects = 4;
+}
+
+// Domain is a collection of ngp nodes with shared resources and config.
+// Each ngp node can be member of single domain.
+service DomainService
+{
+    rpc GetVersion (GetVersionRequest) returns (GetVersionResponse);
+    rpc GetHostPlatformInfo (GetHostPlatformInfoRequest) returns (GetHostPlatformInfoResponse);
+    rpc GetHostTimeZone (GetHostTimeZoneRequest) returns (GetHostTimeZoneResponse);
+
+    // Search for cameras in domain
+    rpc ListCameras (ListCamerasRequest) returns (stream ListCamerasResponse) {
+        option (google.api.http) = {
+            get: "/v1/domain/cameras"
+        };
+    };
+
+    // Fast lookup for retrieving cameras by id
+    rpc BatchGetCameras (BatchGetCamerasRequest) returns (stream BatchGetCamerasResponse) {
+        option (google.api.http) = {
+            post: "/v1/domain/cameras:batchGet"
+            body: "*"
+        };
+    };
+
+    // Fast lookup for retrieving cameras by their component
+    rpc GetCamerasByComponents (GetCamerasByComponentsRequest) returns (stream GetCamerasByComponentsResponse) {
+        option (google.api.http) = {
+            post: "/v1/domain/cameras:getByComponents"
+            body: "*"
+        };
+    };
+
+    // Search for archives in domain.
+    rpc ListArchives (ListArchivesRequest) returns (stream ListArchivesResponse) {
+        option (google.api.http) = {
+            get: "/v1/domain/archives"
+        };
+    };
+
+    /// Fast lookup for retrieving archives by id
+    rpc BatchGetArchives(BatchGetArchivesRequest) returns (stream BatchGetArchivesResponse) {
+        option (google.api.http) = {
+            post: "/v1/domain/archives:batchGet"
+            body: "*"
+        };
+    };
+
+    rpc ListControlPanels (ListControlPanelsRequest) returns (stream ListControlPanelsResponse);
+    rpc BatchGetControlPanels (BatchGetControlPanelsRequest) returns (stream BatchGetControlPanelsResponse);
+
+    rpc ListCommonDevices (ListCommonDevicesRequest) returns (stream ListCommonDevicesResponse);
+    rpc BatchGetCommonDevices (BatchGetCommonDevicesRequest) returns (stream BatchGetCommonDevicesResponse);
+
+    rpc ListComponents (ListComponentsRequest) returns (stream ListComponentsResponse);
+
+    rpc ListGlobalTrackers(ListGlobalTrackersRequest) returns (stream ListGlobalTrackersResponse);
+
+    rpc ListGlobalTrackerCameras(ListGlobalTrackerCamerasRequest) returns (stream ListGlobalTrackerCamerasResponse);
+
+    rpc ListAcfaComponents(ListAcfaComponentsRequest) returns (stream ListAcfaComponentsResponse); 
+    // ListAcfaComponents2() has been introduced to indicate that server supports 'parent_access_point' field in ListAcfaComponentsRequest,
+    // but the implementation is identical with ListAcfaComponents().
+    rpc ListAcfaComponents2(ListAcfaComponentsRequest) returns (stream ListAcfaComponentsResponse);
+    rpc BatchGetAcfaComponents (BatchGetAcfaComponentsRequest) returns (stream BatchGetAcfaComponentsResponse);
+
+    rpc ListNodes(ListNodesRequest) returns (ListNodesResponse) {
+          option (google.api.http) = {
+            get: "/v1/domain/nodes"
+        };
+    }
+}

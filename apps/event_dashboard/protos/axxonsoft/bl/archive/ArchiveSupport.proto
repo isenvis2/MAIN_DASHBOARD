@@ -1,0 +1,639 @@
+syntax = "proto3";
+package axxonsoft.bl.archive;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/archive";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "axxonsoft/bl/media/Media.proto";
+import "axxonsoft/bl/events/Events.proto";
+
+message ChangeBookmarksRequest
+{
+    message BookmarkInternal
+    {
+        string node_name = 3;
+        bool is_protected = 4;
+        events.Bookmark.EAccess access_level = 5;
+
+        string camera_ap = 11;
+        string archive_ap = 12;
+
+        string group_id = 21; // guid of group of comments
+        primitive.Rectangle boundary = 22;
+        primitive.TimeRange range = 23;
+        primitive.Geometry geometry = 24; 
+        string message = 25;
+    }
+	
+    message BookmarkToAdd
+    {
+        BookmarkInternal bookmark_internal = 1;
+        string alert_id = 2;
+    }
+	
+    message BookmarkToChange
+    {
+        BookmarkInternal bookmark_internal = 1;
+        string book_mark_guid = 2;
+    }
+	
+    repeated BookmarkToAdd added = 1;
+    repeated BookmarkToChange changed = 2;
+}
+
+message ChangeBookmarksResponse
+{
+}
+
+message RecInfoRequest
+{
+    string access_point = 1;
+    bool update_cache = 2;
+}
+
+message RecInfoResponse
+{
+    message RecordingInfo
+    {
+        int64 system_size = 1;
+        int64 recording_size = 2;
+        int64 recording_rate = 3;
+        int64 capacity = 4;
+        int64 last_update = 5;
+    }
+
+    RecordingInfo recording_info = 1;
+}
+
+// TODO: translate comments
+enum EStartPosition
+{
+    START_POSITION_AT_KEY_FRAME = 0;           ///< на ключевом кадре для заданной позиции
+    START_POSITION_EXACTLY = 1;                ///< на ключевом кадре для заданной позиции, ранние семплы помечаются как preroll
+    START_POSITION_ONE_FRAME_BACK = 2;         ///< на ключевом кадре для позиции на один кадр назад, ранние семплы помечаются как preroll
+    START_POSITION_NEAREST_KEY_FRAME = 3;      ///< на ближайшем ключевом кадре после заданной позиции
+    START_POSITION_AT_KEY_FRAME_OR_AT_EOS = 4; ///< кто ближе для заданной позиции - на ключевом кадре или на конце потока
+};
+
+/// Priority of reading from the storage.
+/// Note that some embedded storages does not support multiply connection.
+/// So the priotity should be used to decide which of connections should be established.
+enum EEndpointReaderPriority
+{
+    ERP_Low = 0;
+    ERP_Mid = 1;
+    ERP_High = 2;
+};
+
+message CreateReaderEndpointRequest
+{
+    // Storage source access_point
+    string access_point = 1;
+    
+    // media timestamp to start at
+    string begin_time = 2;
+    
+    // adjusts media reading policy at begin_time
+    EStartPosition start_pos_flag = 3;
+    
+    // TODO: add comment
+    bool is_realtime = 4;
+    
+    // NMMSS::EPlayModeFlags bit mask
+    // Leave empty (0) if in doubts.
+    // TODO: add to intefaces
+    int32 mode = 5;
+    
+    // used priority
+    EEndpointReaderPriority priority = 6;
+};
+
+message CreateReaderEndpointResponse
+{
+    media.EndpointRef endpoint = 1;
+}
+
+
+message SeekRequest
+{
+    media.EndpointRef endpoint = 1;
+    
+    string begin_time = 2;
+    
+    // adjusts media reading policy at begin_time
+    EStartPosition start_pos_flag = 3;
+    
+    // NMMSS::EPlayModeFlags bit mask
+    // Leave empty (0) if in doubts.
+    // TODO: add to intefaces
+    int32 mode = 4;
+    
+    // Adjust media samples session id after locating at position.
+    uint32 session_id = 5;
+}
+
+message SeekResponse
+{
+}
+
+
+// TODO: translate to english
+/// Получение истории хранилища для данного источника.
+/// Интервалы выдаются (в количестве не более maxCount) начиная с beginTime и до endTime.
+/// @param minGap задает минимальный временнОй промежуток между интервалами,
+/// при котором два интервала считаются различными. Соседние интервалы,
+/// разделенные меньшим промежутком, будут "склеены" в один интервал.
+/// Этот параметр задается в миллисекундах. Если он равен 0, процедура "склеивания"
+/// интервалов применяться не будет.
+/// Если кол-ов интервалов в хранилище больше чем @param maxCount, то интервалы с 
+/// самыми маленькими промежутками между собой будут объединены в более крупные.
+
+message GetHistoryRequest
+{
+    string access_point = 1;
+    string begin_time = 2;
+    string end_time = 3;
+    uint32 max_count = 4;
+    uint32 min_gap = 5;
+}
+
+// TODO: translate
+/// Массив с результатом передается через @param intervals, где
+/// каждая граница интервала определена через кол-во миллисекунд прошедших с 'universal_time 1900-01-01'
+message GetHistoryResponse
+{
+    message Interval
+    {
+        int64 begin_time = 1;
+        int64 end_time = 2;
+    }
+    repeated Interval intervals = 1;
+}
+
+
+//
+// GetHistory2
+//
+
+message GetHistory2Request
+{
+    string access_point = 1;
+
+    /// Sequested time range in milliseconds since 1900-01-01 00:00:00.000 UTC
+    int64 begin_time = 2;
+    int64 end_time = 3;
+
+    /// Maximum number of intervals to return. When result contains more than
+    /// max_count intervals, only first max_count are returned.
+    uint32 max_count = 4;
+
+    /// Minumum gap between neighbour intervals in milliseconds. Intervals where
+    /// the gap is smaller are merged together.
+    uint64 min_gap_ms = 5;
+
+    enum EScanMode
+    {
+        /// Exact history lookup; may take a while on large intervals with sparse records
+        SM_EXACT = 0;
+
+        /// Quick and approximate lookup, may contain inaccuracies but can be used on large intervals
+        SM_APPROXIMATE = 1;
+    };
+
+    EScanMode scan_mode = 6;
+}
+
+message GetHistory2Response
+{
+    enum EResult
+    {
+        /// Response contains a complete result for the requested time range. Number
+        /// of returned intervals can be 0.
+        FULL = 0;
+
+        /// Response contains a partial result for the requested time range, either
+        /// because max_count was reached or because the full result is not ready.
+        /// Client can retry the request later with a narrower time range, setting
+        /// begin_time = GetHistory2Response::intervals->last().end_time.
+        PARTIAL = 1;
+
+        /// Request cannot be satisfied at the moment, client should re-try later.
+        TRY_LATER = 3;
+    };
+
+    EResult result = 1;
+    message Interval
+    {
+        int64 begin_time = 1;
+        int64 end_time = 2;
+    }
+    repeated Interval intervals = 2;
+}
+
+//
+// GetCalendar
+//
+
+message GetCalendarRequest
+{
+    string access_point = 1;
+
+    /// Requested time range in milliseconds since 1900-01-01 00:00:00.000 UTC
+    int64 begin_time = 2;
+    int64 end_time = 3;
+}
+
+message GetCalendarResponse
+{
+	/// Requested days list which contains records in UTC milliseconds representation since 1900-01-01 00:00:00.000 UTC
+    repeated int64 days = 1;
+}
+
+message ClearIntervalRequest
+{
+    string access_point = 1;
+    string begin_time = 2;
+    string end_time = 3;
+}
+
+message ClearIntervalResponse { }
+
+// TODO: translate
+// Получить размер дискового пространства (в байтах) и продолжительность (в секундах) проигрывания 
+// занимаемого в указанном временном интервале
+message GetSizeRequest
+{
+    string access_point = 1;
+    string begin_time = 2;
+    string end_time = 3;
+}
+
+message GetSizeResponse
+{
+    // disk usage in bytes
+    int64 size = 1;
+    // stored playback duration in seconds
+    int64 duration = 2;
+}
+
+message ResizeRequest
+{
+    // storage access point
+    string access_point = 1;
+
+    // id of requested volume in storage
+    string volume_id = 2;
+
+    // desired size in bytes
+    uint64 new_size = 3;
+}
+
+message ResizeResponse
+{
+    enum EStatusCode
+    {
+        // Operation has been finished successfully.
+        DONE = 0;
+        
+        // Current operation can not be processed due to the previous one is in progress.
+        OPERATION_IN_PROGRESS = 1;
+
+        // Not enough space to expand the volume. 
+        NO_SPACE = 2;
+
+        // Current volume does not support resizing.
+        NOT_SUPPORTED = 3;
+
+        // Volume is inconsistent state to make resize operation, need try it later.
+        TRY_LATER = 4;
+    }
+
+    EStatusCode status_code = 2;
+}
+
+message VolumeState
+{
+    enum EState
+    {
+        STATE_UNSPECIFIED = 0;
+
+        // Opening is in progress.
+        OPENING           = 1;
+
+        // Formatting is in progress.
+        FORMATTING        = 2;
+
+        // The volume is open but not mounted.
+        UNMOUNTED         = 3;
+
+        // The volume is mounted and ready for work.
+        MOUNTED           = 4;
+
+        // An error occurred due to the volume structure.
+        // Work is possible after formatting or restore.
+        ERROR_STATE       = 5;
+
+        // An error occurred during opening.
+        // The volume is unavailable.
+        FILE_ERROR_STATE  = 6;
+
+        // Restore is in progress.
+        // The volume is available, but it's working
+        // in a limited (inefficient) mode.
+        IN_MAINTENANCE    = 7;
+    }
+    
+    // Current state of the volume.
+    EState state = 1;
+
+    // Is the volume available only for reading.
+    bool readonly = 5;
+
+    // Progress, in percent.
+    google.protobuf.UInt32Value progress = 6;
+
+    uint64 used_bytes = 7;
+    uint64 capacity_bytes = 8;
+
+    bool is_encrypted = 9;
+    bool is_valid_encrypted_key = 10;
+}
+
+message GetVolumesStateRequest
+{
+    // Storage access point.
+    string access_point = 1;
+
+    // IDs of requested volumes in storage.
+    // Leave it empty, if all volumes are needed to be requested.
+    repeated string volume_ids = 2;
+}
+
+message GetVolumesStateResponse
+{
+    map<string, VolumeState> volumes_state = 1;
+    repeated string not_found_volumes = 2;
+
+    // Indicates that storage works in failover mode.
+    bool is_failover_mode = 3;
+
+    // Indicates that volumes currently stored in temporary storage.
+    bool is_temporary_storage = 4;
+}
+
+message FormatVolumesRequest
+{
+    // Storage access point.
+    string access_point = 1;
+
+    message Volume
+    {
+        // ID of volume in storage to format.
+        string id = 1;
+    }
+
+    repeated Volume volumes = 2;
+}
+
+message FormatVolumesResponse
+{
+    enum EStatusCode
+    {
+        DONE = 0;
+        NOT_FOUND = 1;
+        FAILED = 2;
+    }
+
+    message Result
+    {
+        string volume_id = 1;
+        EStatusCode status_code = 2;
+    }
+
+    repeated Result results = 1;
+}
+
+message ReindexRequest
+{
+    // Storage access point.
+    string access_point = 1;
+
+    // IDs of requested volumes in storage.
+    repeated string volume_ids = 2;
+
+    message FullReindexType
+    {
+    }
+
+    oneof reindex_type {
+        FullReindexType full_reindex = 10;
+        //TODO
+    }
+}
+
+message ReindexResponse
+{
+    repeated string failed_volume_ids = 1;
+}
+
+message CancelReindexRequest
+{
+    // Storage access point.
+    string access_point = 1;
+
+    // IDs of requested volumes in storage.
+    repeated string volume_ids = 2;
+}
+
+message CancelReindexResponse
+{
+}
+
+message GetDiskSpaceRequest
+{
+    // Storage access point.
+    string storage_access_point = 1;
+    // id of a volume to get disk space info on which it resides.
+    string volume_id = 2;
+}
+
+message GetDiskSpaceResponse
+{
+    message SpaceInfo
+    {
+        // Total size of the filesystem.
+        uint64 capacity_bytes = 1;
+
+        // Free space on the filesystem.
+        uint64 free_bytes = 2;
+    }
+
+    SpaceInfo space = 1;
+
+    enum EStatusCode
+    {
+        // Operation has been finished successfully.
+        OK  = 0;
+
+        // Provided volume hasn't been found.
+        NOT_FOUND = 1;
+
+        // Not sufficient rights to get required information.
+        PERMISSIONS_ERROR = 2;
+
+        // The operation does not supported.
+        NOT_SUPPORTED = 3;
+
+        // The operation is in progress.
+        TRY_LATER = 4;
+
+        // Unknown error has been occured.
+        UNKNOWN_ERROR = 1000;
+    }
+
+    EStatusCode status_code = 2;
+}
+
+message GetArchiveTraitsRequest
+{
+    // Storage access point.
+    string access_point = 1;
+}
+
+enum EArchiveTrait
+{
+    // Archive supports recording to any position.
+    AT_RANDOM_RECORDING = 0;
+}
+
+message GetArchiveTraitsResponse
+{
+    repeated EArchiveTrait traits = 1;
+}
+
+service ArchiveService
+{
+    // Returns the list of traits that are supported by the archive.
+    rpc GetArchiveTraits(GetArchiveTraitsRequest) returns (GetArchiveTraitsResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/traits"
+        };
+    }
+
+//
+// WARNING:
+// 
+// Though ChangeBookmarks capable to send requests to remote nodes
+// it actually not fully sutable for that.
+//
+// So what to do:
+// - If there is a need to change/add bookmarks on different nodes
+// make sure to group such requests by nodes and send them in separate requests.
+// 
+    rpc ChangeBookmarks(ChangeBookmarksRequest) returns (ChangeBookmarksResponse) {
+        option (google.api.http) = {
+            post: "/v1/archive/action:makeUserComment"
+            body: "*"
+        };
+    }
+
+    rpc GetRecordingInfo(RecInfoRequest) returns (RecInfoResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/recordingInfo"
+        };
+    }
+
+    rpc CreateReaderEndpoint(CreateReaderEndpointRequest) returns (CreateReaderEndpointResponse) {
+           option (google.api.http) = {
+            post: "/v1/archive/action:createEndpoint"
+            body: "*"
+        };
+    }
+
+    /// deprecated, use GetHistory2 instead
+    rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/history"
+        };
+    }
+
+    /// Return available history intervals for a given source.
+    /// This is a non-blocking request and client is expected to re-try the
+    /// request later when GetHistory2Response::result != FULL.
+    rpc GetHistory2(GetHistory2Request) returns (GetHistory2Response) {
+        option (google.api.http) = {
+            get: "/v1/archive/history2"
+        };
+    }
+
+	/// Return dates which contains records rounded to days for a given source.
+    rpc GetCalendar(GetCalendarRequest) returns (GetCalendarResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/calendar"
+        };
+    }
+
+    rpc GetSize(GetSizeRequest) returns (GetSizeResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/size"
+        };
+    }
+
+    rpc Seek(SeekRequest) returns (SeekResponse) {
+          option (google.api.http) = {
+            post: "/v1/archive/action:seek"
+            body: "*"
+        };
+    }
+	
+	rpc Resize(ResizeRequest) returns (ResizeResponse) {
+          option (google.api.http) = {
+            post: "/v1/archive/action:resize"
+            body: "*"
+        };
+    }
+
+    rpc ClearInterval(ClearIntervalRequest) returns (ClearIntervalResponse) {
+        option (google.api.http) = {
+            post: "/v1/archive/action:clearInterval"
+            body: "*"
+        };
+    }
+
+    // Returns current state and statistics of requested volumes.
+    rpc GetVolumesState(GetVolumesStateRequest) returns (GetVolumesStateResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/volumes/state"
+        };
+    }
+
+    rpc FormatVolumes(FormatVolumesRequest) returns (FormatVolumesResponse) {
+        option (google.api.http) = {
+            post: "/v1/archive/volumes/format"
+            body: "*"
+        };
+    }
+
+    // Returns disk capacity and free size on which the volume resides.
+    rpc GetDiskSpace (GetDiskSpaceRequest) returns (GetDiskSpaceResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/volumes/diskSpace"
+        };
+    }
+    
+    // Schedule reindex volumes request.
+    rpc Reindex (ReindexRequest) returns (ReindexResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/volumes/reindex"
+        };
+    }
+    
+    // Cancel reindex volumes request.
+    rpc CancelReindex (CancelReindexRequest) returns (CancelReindexResponse) {
+        option (google.api.http) = {
+            get: "/v1/archive/volumes/cancel_reindex"
+        };
+    }
+}

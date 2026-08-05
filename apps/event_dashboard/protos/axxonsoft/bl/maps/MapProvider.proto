@@ -1,0 +1,66 @@
+syntax = "proto3";
+package axxonsoft.bl.maps;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/maps";
+
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+// Describes settings of a map provider registered on the server.
+message MapProvider
+{
+    // A unique identifier of the provider (a GUID).
+    string id = 1;
+
+    // A name of the provider, for instance: "Google Maps", "OpenStreetMap", "Yandex Maps", etc.
+    // Should be permanent regardless of client localization.
+    string name = 2;
+
+    // An API key (if required by the provider).
+    google.protobuf.StringValue api_key = 4;
+
+    // Copyright (if required by the provider).
+    google.protobuf.StringValue copyright = 5;
+
+    // Related map types.
+    map<string /*a unique identifier of a map type (a GUID)*/, MapType> map_types = 6;
+
+    // Additional field for storing custom parameters.
+    google.protobuf.Struct custom_data = 7;
+
+    // The current etag of the map provider.
+    // This value is computed by the server, and should be send on update requests
+    // to ensure the client has an up-to-date value before proceeding.
+    // Empty if the provider is being created.
+    string etag = 99;
+}
+
+// Describes settings of a map type supported by the provider.
+message MapType
+{
+    // A unique identifier of the map type (a GUID) is stored in the related map provider.
+    // See "map_types" field of "MapProvider" message.
+
+    // A name of the map type, for instance: "roadmap", "satellite", "hybrid", etc.
+    // Should be permanent regardless of client localization.
+    string name = 2;
+
+    // Whether the map type is enabled.
+    bool enabled = 3;
+
+    // A minimum zoom value.
+    google.protobuf.Int32Value min_zoom = 4;
+
+    // A maximum zoom value.
+    google.protobuf.Int32Value max_zoom = 5;
+
+    // A default zoom value.
+    google.protobuf.Int32Value default_zoom = 6;
+
+    // A default center.
+    primitive.Point default_center = 7;
+
+    // Additional field for storing custom parameters.
+    google.protobuf.Struct custom_data = 8;
+}

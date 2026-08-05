@@ -1,0 +1,157 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+import "google/api/annotations.proto";
+
+enum EFileType
+{
+    FILE_TYPE_UNSPECIFIED = 0;
+
+    REGULAR_FILE          = 1;
+    DIRECTORY             = 2;
+    BLOCK_DEVICE          = 3;
+}
+
+enum EFSPermissions
+{
+    NONE           = 0;
+    READ           = 1;
+    WRITE          = 2;
+    READ_WRITE     = 3;
+}
+
+message FileInfo
+{
+    string path = 1;
+    string name = 2;
+    EFileType type = 3;
+    EFSPermissions perms = 4;
+    uint64 size_bytes = 5;
+}
+
+message SpaceInfo
+{
+    // Total size of the filesystem.
+    uint64 capacity_bytes = 1;
+
+    // Free space on the filesystem.
+    uint64 free_bytes = 2;
+}
+
+message FSError
+{
+    enum ECode
+    {
+        OK                    = 0;
+        NOT_FOUND             = 1;
+        PERMISSIONS_ERROR     = 2;
+        NOT_A_DIRECTORY       = 10;
+    }
+
+    ECode status = 1;
+    string message = 2;
+}
+
+message Credentials
+{
+    string username = 1;
+    string password = 2;
+}
+
+message ListDirectoryRequest
+{
+    // Name of node, or empty if current node is assumed.
+    string node_name = 1;
+
+    // Path to the directory,
+    // or empty to list through the root directory.
+    string path = 2;
+
+    // If specified, applies credentials to access a shared resource.
+    Credentials credentials = 7;
+
+    // If specified, filters a list by keeping files of the chosen type.
+    EFileType type = 3;
+
+    // If specified, filters a list by keeping files which names match the pattern.
+    // Use the extended POSIX regular expression grammar
+    // (see https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html#tag_09_04).
+    // Character matching is performed without regard to case.
+    string name_pattern = 4;
+
+    // The maximum number of files to return.
+    int32 page_size = 5;
+
+    // The next_page_token value returned from a previous List request.
+    string page_token = 6;
+}
+
+message ListDirectoryResponse
+{
+    repeated FileInfo entries = 1;
+
+    // Token to retrieve the next page of results,
+    // or empty if there are no more result in the list.
+    string next_page_token = 2;
+
+    FSError error = 15;
+}
+
+message GetFileInfoRequest
+{
+    // Name of node, or empty if current node is assumed.
+    string node_name = 1;
+
+    string path = 2;
+
+    // If specified, applies credentials to access a shared resource.
+    Credentials credentials = 3;
+}
+
+message GetFileInfoResponse
+{
+    FileInfo file_info = 1;
+    string parent_path = 2;
+    FSError error = 15;
+}
+
+message GetSpaceRequest
+{
+    // Name of node, or empty if current node is assumed.
+    string node_name = 1;
+
+    string path = 2;
+
+    // If specified, applies credentials to access a shared resource.
+    Credentials credentials = 3;
+}
+
+message GetSpaceResponse
+{
+    SpaceInfo space_info = 1;
+    FSError error = 15;
+}
+
+service FileSystemBrowser
+{
+    rpc ListDirectory (ListDirectoryRequest) returns (ListDirectoryResponse) {
+        option (google.api.http) = {
+            get: "/v1/fs/list"
+        };
+    }
+
+    rpc GetFileInfo (GetFileInfoRequest) returns (GetFileInfoResponse) {
+        option (google.api.http) = {
+            get: "/v1/fs/file"
+        };
+    }
+
+    rpc GetSpace (GetSpaceRequest) returns (GetSpaceResponse) {
+        option (google.api.http) = {
+            get: "/v1/fs/space"
+        };
+    }
+
+}

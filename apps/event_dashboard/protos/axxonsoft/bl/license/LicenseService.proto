@@ -1,0 +1,360 @@
+syntax = "proto3";
+package axxonsoft.bl.license;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/license";
+
+import "axxonsoft/bl/license/Status.proto";
+import "google/api/annotations.proto";
+import "google/rpc/status.proto";
+import "google/protobuf/timestamp.proto";
+
+enum LicenseServiceStatus
+{
+    LS_Unknown                = 0;
+    LS_OK                     = 1;
+    LS_NoKey                  = 2;
+    LS_InvalidKey             = 3;
+    LS_MismatchingKey         = 4;
+    LS_Expired                = 5;
+    LS_DemoInactive           = 6;
+    LS_DemoExpired            = 7;
+    LS_DemoActive             = 8;
+    LS_Unavailable            = 9;
+};
+
+enum LicensedFeatureType
+{
+    option deprecated = true;
+
+    MultimediaStorage                   = 0;
+    MultimediaStorage_Space             = 1;
+    DeviceIpint                         = 2;
+    DeviceNVR16                         = 3;
+    DeviceNVR                           = 27;
+    NvrLogic                            = 4;
+    FaceRecognizerChannelBinding        = 5;
+    FaceTracker                         = 6;
+    LPRDetector                         = 7;
+    ObjectTracker                       = 8;
+    TagAndTrackPro                      = 9;
+    VmdaChannelBinding                  = 10;
+    VmdaChannelBindingLight             = 11;
+    TextChannel                         = 12;
+    OfflineAnalytics                    = 13;
+    FireDetector                        = 14;
+    SmokeDetector                       = 15;
+    FaceRealtime                        = 16;
+    LPRRealtime                         = 17;
+    PeopleCounter                       = 18;
+    QueueDetector                       = 19;
+    NeuroFeatureExtractor               = 20;
+    PoseDetector                        = 21;
+    WaterLevelDetector                  = 22;
+    PPEDetector                         = 23;
+
+    ACFA                                = 28;
+    ACFAArea                            = 29;
+    ACFAController                      = 30;
+    ACFAFence                           = 26;
+    ACFAGroupArea                       = 31;
+    ACFALock                            = 32;
+    ACFALoop                            = 33;
+    ACFAReader                          = 24;
+    ACFARelay                           = 34;
+    ACFASensor                          = 25;
+
+    // The type of a licensed feature is not known in this version.
+    UNKNOWN_LICENSED_FEATURE_TYPE       = 9999;
+};
+
+message Node
+{
+    string name = 1;
+}
+
+message NodeRef
+{
+    string name = 1;
+    string friendly_name = 2;
+}
+
+message Restriction
+{
+    LicensedFeatureType feature = 1;
+
+    // A stringified type of a licensed feature (as it's presented in the license).
+    string vendor = 2;
+
+    int32 count = 3;
+}
+
+message Restrictions
+{
+    option deprecated = true;
+
+    repeated Restriction restrictions = 1;
+}
+
+message ValidPeriod
+{
+    google.protobuf.Timestamp since_time = 3;
+    google.protobuf.Timestamp till_time = 4;
+
+    string since = 1 [deprecated = true];
+    string till = 2 [deprecated = true];
+}
+
+message LicenseKeyRequest
+{
+}
+
+message RestrictionsRequest
+{
+    option deprecated = true;
+}
+
+message DistributeLicenseKeyRequest
+{
+    string key = 1;
+}
+
+message DropLicenseKeyRequest
+{
+}
+
+message IsPossibleToLaunchRequest
+{
+    string service_name = 1;
+    uint32 quantity = 2;
+}
+
+message LicenseKeyInfoRequest
+{
+}
+
+message LicenseKeyResponse
+{
+    string license_key = 1;
+}
+
+message RestrictionsResponse
+{
+    option deprecated = true;
+
+    Restrictions restrictions = 1;
+    Restrictions available_restrictions = 2;
+}
+
+message Constraint
+{
+    string feature = 1;
+    int32 count = 2;
+}
+
+message Constraints
+{
+    repeated Constraint constraints = 1;
+}
+
+message LeaseInfo
+{
+    string feature = 1;
+    int32 count = 2;
+}
+
+message LeasesInfo
+{
+    repeated LeaseInfo leases_info = 1;
+}
+
+message GetGlobalRestrictionsRequest
+{ }
+
+message GetGlobalRestrictionsResponse
+{
+    Constraints constraints = 1;
+}
+
+message GetNodeRestrictionsRequest
+{
+    repeated Node nodes = 1;
+}
+
+message NodeRestrictions
+{
+    LeasesInfo acquired = 1;
+    Constraints total = 3;
+}
+
+// Reports current  restrictions acquired by the node
+message GetNodeRestrictionsResponse
+{
+    NodeRef node_ref = 1;
+    
+    oneof response 
+    {
+        NodeRestrictions restrictions = 2;
+        // Error returned when problems were encountered
+        google.rpc.Status rpc_failure = 3;
+    }
+}    
+
+message DistributeLicenseKeyResponse
+{
+    bool distributed = 1;
+
+    // If set, represents the error message for the operation.
+    Status error = 2;
+}
+
+message DropLicenseKeyResponse
+{
+    bool dropped = 1;
+
+    // If set, represent the error message for the operation.
+    Status error = 2;
+}
+
+message IsPossibleToLaunchResponse
+{
+    bool is_possible = 1;
+
+    // If set, represents the error message for the operation.
+    Status error = 2;
+}
+
+message LicenseKeyInfoResponse
+{
+    string serial_number = 1;
+    int32 type = 6;
+    bool is_license_expiring = 3;
+    LicenseServiceStatus ls_status = 4;
+    ValidPeriod valid_period = 5;
+
+    // If set, represents the error message for the operation.
+    Status error = 7;
+
+    int32 product_type = 2 [deprecated = true];
+}
+
+// Request message for the `GetDomainLicenseKeyInfo` method.
+message GetDomainLicenseKeyInfoRequest {
+}
+
+// Response message for the `GetDomainLicenseKeyInfo` method.
+message GetDomainLicenseKeyInfoResponse {
+    // Represents a response of a node.
+    message NodeResponse {
+        // The ID of a node.
+        string node = 1;
+        // The mutate response.
+        oneof response {
+            // License key info for a node if the request is successful.
+            LicenseKeyInfoResponse key_info = 2;
+            // Error returned when problems were encountered.
+            google.rpc.Status rpc_failure = 3;
+        }
+    }
+
+    // Responses of all nodes in the domain.
+    repeated NodeResponse responses = 1;
+}
+
+message CreateLicenseDocumentRequest
+{
+    enum Format
+    {
+        BASE64 = 0;
+        XML = 1;
+    }
+    repeated string nodes = 1;
+    map<string, string> assign_attributes = 2;
+    Format format = 3;
+    uint64 chunk_size_kb = 4;
+}
+
+message CreateLicenseDocumentResponse
+{
+    uint64 total_size_bytes = 1;
+    uint64 chunk_index = 2;
+    bytes chunk_data = 3;
+}
+
+message GetHostInfoRequest
+{
+}
+
+message GetHostInfoResponse
+{
+    string osname = 1;
+    string hwinfo = 2;
+}
+
+service LicenseService
+{
+    rpc LicenseKey(LicenseKeyRequest) returns (LicenseKeyResponse) {
+        option (google.api.http) = {
+            get: "/v1/license"
+        };
+    }
+
+    rpc Restrictions(RestrictionsRequest) returns (RestrictionsResponse) {
+        option deprecated = true;
+        option (google.api.http) = {
+            get: "/v1/license/restrictions"
+        };
+    }
+
+    // Returns a list of global (domain|system) restrictions
+    rpc GetGlobalRestrictions(GetGlobalRestrictionsRequest) returns (GetGlobalRestrictionsResponse) {
+        option (google.api.http) = {
+            post: "/v1/license/globalRestrictions"
+        };
+    }
+
+    // Returns a list of restrictions by the nodes specified in the request
+    rpc GetNodeRestrictions(GetNodeRestrictionsRequest) returns (stream GetNodeRestrictionsResponse) {
+        option (google.api.http) = {
+            post: "/v1/license/nodeRestrictions"
+        };
+    }
+
+    rpc DistributeLicenseKey(DistributeLicenseKeyRequest) returns (DistributeLicenseKeyResponse) {
+        option (google.api.http) = {
+            post: "/v1/license:distribute"
+            body: "*"
+        };
+    }
+
+    rpc DropLicenseKey(DropLicenseKeyRequest) returns (DropLicenseKeyResponse) {
+        option (google.api.http) = {
+            post: "/v1/license:drop"
+            body: "*"
+        };
+    }
+
+    rpc IsPossibleToLaunch(IsPossibleToLaunchRequest) returns (IsPossibleToLaunchResponse) {
+        option (google.api.http) = {
+            post: "/v1/license:verifyLaunchPossibility"
+            body: "*"
+        };
+    }
+
+    rpc LicenseKeyInfo(LicenseKeyInfoRequest) returns (LicenseKeyInfoResponse) {
+        option (google.api.http) = {
+            get: "/v1/license:info"
+        };
+    }
+
+    // Returns LicenseKeyInfo for a whole domain.
+    rpc GetDomainLicenseKeyInfo(GetDomainLicenseKeyInfoRequest) returns (GetDomainLicenseKeyInfoResponse) {
+        option (google.api.http) = {
+            get: "/v1/license/domain"
+        };
+    }
+
+    rpc CreateLicenseDocument(CreateLicenseDocumentRequest) returns (stream CreateLicenseDocumentResponse){}
+    rpc GetHostInfo(GetHostInfoRequest) returns (GetHostInfoResponse){}
+}
+
+

@@ -1,0 +1,31 @@
+syntax = "proto3";
+package axxonsoft.bl.domain;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/domain";
+import "google/api/annotations.proto";
+import "axxonsoft/bl/primitive/Color.proto";
+
+message GetTextEventRequest
+{
+    string access_point = 1;
+}
+
+message GetTextEventResponse
+{
+    string access_point = 1;
+    string begin_words = 2;
+    string end_words = 3;
+    primitive.Color background_color = 4;
+    int32 sample_duration = 5;
+    int32 sample_offset = 6;
+    bool erase_after_end = 7;
+}
+
+service TextEventSupportService
+{
+    rpc GetTextEvent (GetTextEventRequest) returns (GetTextEventResponse) {
+        option (google.api.http) = {
+            get: "/v1/domain/textEvent"
+        };
+    };
+}

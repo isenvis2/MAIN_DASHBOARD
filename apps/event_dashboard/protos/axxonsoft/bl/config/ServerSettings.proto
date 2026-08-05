@@ -1,0 +1,59 @@
+syntax = "proto3";
+package axxonsoft.bl.config;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/config";
+
+enum LogLevel
+{
+    LOG_LEVEL_OFF     = 0;
+    LOG_LEVEL_ERR     = 10;
+    LOG_LEVEL_WARNING = 20;
+    LOG_LEVEL_INFO    = 40;
+    LOG_LEVEL_DEBUG   = 50;
+    LOG_LEVEL_TRACE   = 60;
+    LOG_LEVEL_MAX     = 100;
+}
+
+message GetLogLevelRequest
+{
+    // Nodes to request, or empty if current node is assumed.
+    repeated string nodes = 1;
+}
+
+message GetLogLevelResponse
+{
+    map<string, LogLevel> node_log_level = 1;
+    repeated string failed_nodes = 2;
+}
+
+message SetLogLevelRequest
+{
+    // Nodes to request, or empty if current node is assumed.
+    repeated string nodes = 1;
+    LogLevel log_level = 2;
+}
+
+message SetLogLevelResponse
+{
+    repeated string failed_nodes = 1;
+}
+
+message DropLogsRequest
+{
+    // Nodes to request, or empty if current node is assumed.
+    repeated string nodes = 1;
+}
+
+message DropLogsResponse
+{
+    repeated string failed_nodes = 1;
+}
+
+service ServerSettings
+{
+    rpc GetLogLevel(GetLogLevelRequest) returns (GetLogLevelResponse);
+
+    rpc SetLogLevel(SetLogLevelRequest) returns (SetLogLevelResponse);
+
+    rpc DropLogs(DropLogsRequest) returns (DropLogsResponse);
+}

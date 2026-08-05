@@ -1,0 +1,101 @@
+syntax = "proto3";
+package axxonsoft.bl.security;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/security";
+
+enum ECameraAccess
+{
+	CAMERA_ACCESS_UNSPECIFIED = 0;
+	CAMERA_ACCESS_FORBID = 10;
+	CAMERA_ACCESS_ONLY_ARCHIVE = 15; // access only to archive(live video forbidden). 
+	CAMERA_ACCESS_MONITORING_ON_PROTECTION = 20;
+	CAMERA_ACCESS_MONITORING = 30;
+	CAMERA_ACCESS_ARCHIVE = 40;
+	CAMERA_ACCESS_MONITORING_ARCHIVE_MANAGE = 50;
+	CAMERA_ACCESS_FULL = 60;
+}
+
+enum EMicrophoneAccess
+{
+	MICROPHONE_ACCESS_UNSPECIFIED = 0;
+	MICROPHONE_ACCESS_FORBID = 10;
+	MICROPHONE_ACCESS_MONITORING = 20;
+	MICROPHONE_ACCESS_FULL = 30;
+}
+
+enum ETelemetryPriority
+{
+	// Not specified.
+	TELEMETRY_PRIORITY_UNSPECIFIED = 0;
+
+	TELEMETRY_PRIORITY_HIGHEST = 100;
+	TELEMETRY_PRIORITY_HIGH = 200;
+	TELEMETRY_PRIORITY_NORMAL = 300;
+	TELEMETRY_PRIORITY_LOW = 400;
+	TELEMETRY_PRIORITY_LOWEST = 500;
+
+	TELEMETRY_PRIORITY_NO_ACCESS = 1000;
+}
+
+enum EArchiveAccess
+{
+	ARCHIVE_ACCESS_UNSPECIFIED = 0;
+	ARCHIVE_ACCESS_FORBID = 10;
+	ARCHIVE_ACCESS_FULL = 20;
+}
+
+// Possible access to ACFA
+enum EAcfaAccess
+{
+	// Not specified.
+	ACFA_ACCESS_UNSPECIFIED = 0;
+
+	// Cannot access the device.
+	ACFA_ACCESS_FORBID = 10;
+
+	// Can view the device.
+	ACFA_ACCESS_VIEW = 20;
+
+	// Can view and manage the device.
+	ACFA_ACCESS_VIEW_MANAGE = 30;
+
+	// Can view, manage and configure the device.
+	ACFA_ACCESS_VIEW_MANAGE_CONFIGURE = 40;
+}
+
+enum EVideowallAccess
+{
+	VIDEOWALL_ACCESS_UNSPECIFIED = 0;
+	VIDEOWALL_ACCESS_FORBID = 10;
+	VIDEOWALL_ACCESS_FULL = 20;
+}
+
+enum EMacrosAccess
+{
+	MACROS_ACCESS_UNSPECIFIED = 0;
+	MACROS_ACCESS_FORBID = 10;
+	MACROS_ACCESS_FULL = 1000;
+}
+
+// Represents single role permissions.
+message ObjectsPermissions
+{
+	// maps objects id's to camera permissions
+	map<string, ECameraAccess> camera_access = 1;
+
+	// maps objects id's to mic permissions
+	map<string, EMicrophoneAccess> microphone_access = 2;
+
+	// maps objects id's to telemtry permissions
+	map<string, ETelemetryPriority> telemetry_priority = 3;
+
+	// maps objects id's to archive permissions
+	map<string, EArchiveAccess> archive_access = 4;
+
+	// maps ACFA UIDs to ACFA permissions
+	map<string, EAcfaAccess> acfa_access = 6;
+
+	// maps objects id's to videowall permissions
+	map<string, EVideowallAccess> videowall_access = 5;
+}
+

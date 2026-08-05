@@ -1,0 +1,176 @@
+{
+  "version": 2,
+  "description": "Example camera list supporting both RTSP->HLS conversion and direct HLS playback. Old rtsp/hls fields are still supported for compatibility.",
+  "cameras": [
+    {
+      "id": "video1",
+      "name": "YTN 라이브",
+      "lat": 37.5662952,
+      "lng": 126.9779451,
+      "sourceType": "rtsp+",
+      "sourceUrl": "rtsp://admin:admin@192.168.0.52/video1+audio1",
+      "note": "상시 변환 RTSP 소스입니다. camera_list.json에 항상 active로 유지되어 YTN 라이브 패널에서 즉시 재생됩니다."
+    },
+    {
+      "id": "cam001",
+      "name": "출입구 RTSP",
+      "lat": 37.56669,
+      "lng": 126.97842,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.14/SourceEndpoint.video:0:0",
+      "note": "RTSP 주소이므로 Converter를 거쳐 /media/cam001/stream.m3u8 로 재생됩니다."
+    },
+    {
+      "id": "cam002",
+      "name": "복도 RTSP",
+      "lat": 37.56669,
+      "lng": 126.97956,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.16/SourceEndpoint.video:0:0",
+      "note": "RTSP 주소이므로 Converter를 거쳐 /media/cam002/stream.m3u8 로 재생됩니다."
+    },
+    {
+      "id": "cam003",
+      "name": "사무실 RTSP",
+      "lat": 37.56669,
+      "lng": 126.98012,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.17/SourceEndpoint.video:0:0",
+      "note": "RTSP 주소이므로 Converter를 거쳐 /media/cam003/stream.m3u8 로 재생됩니다."
+    },
+    {
+      "id": "cam004",
+      "name": "엔코더",
+      "lat": 37.56669,
+      "lng": 126.98072,
+      "sourceType": "rtsp",
+      "sourceUrl": "rtsp://root:axxon_7626@192.168.0.67:554/hosts/AXXONSERVER/DeviceIpint.15/SourceEndpoint.video:0:0",
+      "note": "RTSP 주소이므로 Converter를 거쳐 /media/cam003/stream.m3u8 로 재생됩니다."
+    },
+    {
+      "id": "cam005",
+      "name": "감나무진사거리(공업탑)",
+      "lat": 35.517683,
+      "lng": 129.310295,
+      "sourceType": "hls",
+      "sourceUrl": "https://webcctv.its.ulsan.kr:7083/server1/live/A0019_01/visumy.m3u8",
+      "note": "HLS 주소이므로 Converter를 거치지 않고 브라우저가 직접 재생합니다."
+    },
+    {
+      "id": "cam006",
+      "name": "감나무진사거리(두왕4)",
+      "lat": 35.517683,
+      "lng": 129.310295,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server2/live/T2138_02/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 RTSP로 처리됩니다."
+    },
+    {
+      "id": "cam007",
+      "name": "강변맨션",
+      "lat": 35.5542089,
+      "lng": 129.3001101,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server3/live/U1074_03/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 Direct HLS로 처리됩니다."
+    },
+    {
+      "id": "cam008",
+      "name": "개운삼거리",
+      "lat": 35.513515,
+      "lng": 129.312061,
+      "sourceType": "hls",
+      "sourceUrl": "https://webcctv.its.ulsan.kr:7083/server2/live/T2070_02/visumy.m3u8",
+      "note": "HLS 주소이므로 Converter를 거치지 않고 브라우저가 직접 재생합니다."
+    },
+    {
+      "id": "cam009",
+      "name": "경제진흥원",
+      "lat": 35.5711036,
+      "lng": 129.3602703,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server2/live/C2154_02/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 RTSP로 처리됩니다."
+    },
+    {
+      "id": "cam010",
+      "name": "고늘사거리",
+      "lat": 35.502437,
+      "lng": 129.429886,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server2/live/C0237_02/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 Direct HLS로 처리됩니다."
+    },
+    {
+      "id": "cam011",
+      "name": "고속도로종점부",
+      "lat": 35.548046,
+      "lng": 129.262668,
+      "sourceType": "hls",
+      "sourceUrl": "https://webcctv.its.ulsan.kr:7083/server3/live/U1080_03/visumy.m3u8",
+      "note": "HLS 주소이므로 Converter를 거치지 않고 브라우저가 직접 재생합니다."
+    },
+    {
+      "id": "cam012",
+      "name": "공암마을교차로",
+      "lat": 35.568444,
+      "lng": 129.237278,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server1/live/A0038_01/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 RTSP로 처리됩니다."
+    },
+    {
+      "id": "cam013",
+      "name": "공업탑R(내부)",
+      "lat": 35.532239,
+      "lng": 129.307554,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server1/live/C0176_01/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 Direct HLS로 처리됩니다."
+    },
+    {
+      "id": "cam014",
+      "name": "공업답R(두왕로)",
+      "lat": 35.531815,
+      "lng": 129.30756,
+      "sourceType": "hls",
+      "sourceUrl": "https://webcctv.its.ulsan.kr:7083/server1/live/C0174_01/visumy.m3u8",
+      "note": "HLS 주소이므로 Converter를 거치지 않고 브라우저가 직접 재생합니다."
+    },
+    {
+      "id": "cam015",
+      "name": "공업답R(문수로)",
+      "lat": 35.532385,
+      "lng": 129.30686,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server1/live/C0171_01/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 RTSP로 처리됩니다."
+    },
+    {
+      "id": "cam016",
+      "name": "공업답R(봉원로)",
+      "lat": 35.532731,
+      "lng": 129.307842,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server1/live/C0173_01/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 Direct HLS로 처리됩니다."
+    },
+    {
+      "id": "cam017",
+      "name": "공업답R(삼산로)",
+      "lat": 35.532394,
+      "lng": 129.308292,
+      "sourceType": "hls",
+      "sourceUrl": "https://webcctv.its.ulsan.kr:7083/server1/live/C0172_01/visumy.m3u8",
+      "note": "HLS 주소이므로 Converter를 거치지 않고 브라우저가 직접 재생합니다."
+    },
+    {
+      "id": "cam018",
+      "name": "공업탑R(수암로)",
+      "lat": 35.53195,
+      "lng": 129.308155,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server1/live/C0175_01/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 RTSP로 처리됩니다."
+    },
+    {
+      "id": "cam019",
+      "name": "과기원",
+      "lat": 35.570624,
+      "lng": 129.190184,
+      "hls": "https://webcctv.its.ulsan.kr:7083/server2/live/T2110_02/visumy.m3u8",
+      "note": "기존 데이터 호환 예시입니다. sourceType/sourceUrl 없이도 Direct HLS로 처리됩니다."
+    }
+  ]
+}

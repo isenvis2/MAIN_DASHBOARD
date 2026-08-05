@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package axxonsoft.bl.primitive;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/primitive";
+
+import "axxonsoft/bl/primitive/Color.proto";
+
+message KeyWords
+{
+    message KeyWord 
+    {
+        bool is_case_sensitive = 1;
+        bool is_for_full_string = 2;
+        bool color_background_enabled = 3;
+        string text = 4;
+        primitive.Color color = 5;
+        primitive.Color color_background = 6;
+    }
+
+    repeated KeyWord key_words = 1;
+}

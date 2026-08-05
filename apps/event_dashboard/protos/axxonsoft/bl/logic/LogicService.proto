@@ -1,0 +1,504 @@
+syntax = "proto3";
+package axxonsoft.bl.logic;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/logic";
+
+import "google/api/annotations.proto";
+import "axxonsoft/bl/events/Events.proto";
+import "axxonsoft/bl/logic/Macro.proto";
+
+message MacrosSearchQuery
+{
+    enum EMacroMode
+    {
+        MACRO_MODE_UNSPECIFIED = 0;
+        COMMON_MACRO     = 1;
+        TIMEZONE_MACRO   = 2;
+        AUTORULE_MACRO   = 3;
+        CONTINUOUS_MACRO = 4;
+    }
+
+    // If specified, filters macros by mode.
+    EMacroMode mode = 1;
+
+    // If not empty, filters macros by mode subject reference.
+    // Should be:
+    //  - camera access point for autorule macros.
+    //  - timezone ID for timezone macros.
+    // Not supported for common and continuous macros.
+    string mode_subject_reference = 2;
+
+    // If not empty, filters macros by condition subject reference.
+    // Should be:
+    //  - detector access point for DetectorMacroCondition,
+    //  - timezone ID for TimezoneMacroCondition,
+    //  - and so on.
+    string condition_subject_reference = 3;
+}
+
+message ListMacrosRequest
+{
+    enum EViewMode
+    {
+        // Server response includes only basic Macros info,
+        // with no conditions and rules.
+        VIEW_MODE_STRIPPED = 0;
+        // Full representation
+        VIEW_MODE_FULL = 1;
+    }
+    EViewMode view = 1;
+    MacrosSearchQuery query = 2;
+    string page_token = 14;
+    int32 page_size = 15;
+}
+
+message ListMacrosResponse
+{
+    repeated MacroConfig items = 1;
+
+    string next_page_token = 15;
+}
+
+message BatchGetMacrosRequest
+{
+    repeated string macros_ids = 1;
+}
+
+message BatchGetMacrosResponse
+{
+    repeated MacroConfig items = 1;
+    repeated string not_found_macros = 2;
+}
+
+message ChangeMacrosRequest
+{
+    repeated string removed_macros = 1;
+    repeated MacroConfig modified_macros = 2;
+    repeated MacroConfig added_macros = 3;
+}
+
+message ChangeMacrosResponse
+{
+}
+
+message LaunchMacroRequest
+{
+    string macro_id = 1;
+}
+
+message LaunchMacroResponse
+{
+}
+
+message ChangeArmStateRequest
+{
+    string camera_ap = 1;
+    events.CameraArmStateEvent.ECameraArmState state = 2;
+}
+
+message ChangeArmStateResponse
+{
+}
+
+message GetActiveAlertsRequest
+{
+    string camera_ap = 1;
+}
+
+message GetActiveAlertsResponse
+{
+    repeated events.Alert alerts = 1;
+}
+
+message BatchGetActiveAlertsRequest
+{
+    repeated string nodes = 1;
+}
+
+message BatchGetActiveAlertsResponse
+{
+    repeated events.Alert alerts = 1;
+    repeated string unreachable_nodes = 2;
+}
+
+message RaiseAlertRequest
+{
+    string camera_ap = 1;
+}
+
+message RaiseAlertResponse
+{
+    bool result = 1;
+    string alert_id = 2;
+}
+
+message BeginAlertReviewResponse
+{
+    bool result = 1;
+}
+
+message CancelAlertReviewResponse
+{
+    bool result = 1;
+}
+
+message ContinueAlertReviewResponse
+{
+    bool result = 1;
+}
+
+message CompleteAlertReviewResponse
+{
+    bool result = 1;
+}
+
+message EscalateAlertResponse
+{
+    bool result = 1;
+}
+
+message BeginAlertReviewRequest
+{
+    string camera_ap = 1;
+    string alert_id = 2;
+}
+
+message CancelAlertReviewRequest
+{
+    string camera_ap = 1;
+    string alert_id = 2;
+}
+
+message ContinueAlertReviewRequest
+{
+    string camera_ap = 1;
+    string alert_id = 2;
+}
+
+message CompleteAlertReviewRequest
+{
+    events.AlertState.ESeverity severity = 1;
+    events.Bookmark bookmark = 2;
+    string camera_ap = 3;
+    string alert_id = 4;
+}
+
+message EscalateAlertRequest
+{
+    string camera_ap = 1;
+    string alert_id = 2;
+    events.EAlertPriority priority = 3;
+    repeated string user_roles = 4;
+    string comment = 5;
+}
+
+message Duration
+{
+	uint64 seconds = 1;
+}
+
+message ChangeConfigRequest
+{
+    Duration user_alert_ttl = 1; // 120-349199
+    Duration rule_alert_ttl = 2; // 120-349199
+    Duration conditional_ttl = 3;
+    MandatoryComment required_comment = 4;
+    Duration max_event_age = 5;
+    Duration event_cleanup_period = 6;
+}
+
+message ChangeConfigResponse
+{
+}
+
+message GetConfigRequest
+{
+}
+
+message GetConfigResponse
+{
+    Duration user_alert_ttl = 1;
+    Duration rule_alert_ttl = 2;
+    Duration conditional_ttl = 3;
+    MandatoryComment required_comment = 4;
+    Duration max_event_age = 5;
+    Duration event_cleanup_period = 6;
+}
+
+
+message CounterMacroExtension
+{
+    map<uint64, string> incs = 1;
+    map<uint64, string> decs = 2;
+    map<int64, string> difs = 3;
+}
+
+message TagList
+{
+    repeated string tags = 1;
+}
+
+message CounterGroupExtension
+{
+    repeated TagList tags = 1;
+}
+
+message CounterExtension
+{
+    oneof type
+    {
+        CounterMacroExtension macro = 10;
+        CounterGroupExtension group = 11;
+    }
+}
+
+message CounterConfig
+{
+    string guid = 1;
+    string name = 2;
+    string host_id = 3;
+    string timezone_id = 4;
+    bool autostart = 5;
+    Duration cleanup_period = 6;
+
+    repeated MacroCondition increments = 7;
+    repeated MacroCondition decrements = 8;
+    repeated CounterExtension extensions = 9;
+}
+
+message ListCountersRequest
+{
+    bool stripped = 1;
+    int32 page_size = 2;
+    string page_token = 3;
+}
+
+message BatchGetCountersRequest
+{
+    repeated string counters_ids = 1;
+}
+
+message ListCountersResponse
+{
+    repeated CounterConfig counters = 1;
+    string next_page_token = 2;
+}
+
+message ChangeCountersRequest
+{
+    repeated string removed_counters = 1;
+    repeated CounterConfig modified_counters = 2;
+}
+
+message ChangeCountersResponse
+{
+}
+
+message CounterActionRequest
+{
+    CounterAction action = 1;
+}
+
+message CounterActionResponse
+{
+}
+
+message GetCounterStateRequest
+{
+    string counter = 1;
+}
+
+message CounterState
+{
+    uint64 increments = 1;
+    uint64 decrements = 2;
+}
+
+message GetCounterStateResponse
+{
+    bool is_active = 1;
+    CounterState state = 2;
+}
+
+message GetCounterGroupStateRequest
+{
+    string counter = 1;
+    TagList tags = 2;
+}
+
+message CounterGroupState
+{
+    TagList tag_values = 1;
+    CounterState state = 2;
+}
+
+message GetCounterGroupStateResponse
+{
+    repeated CounterGroupState group_states = 1;
+}
+
+message GetUserScriptsRequest
+{
+    repeated string host_ids = 1;
+}
+
+message UserScripts
+{
+    repeated string names = 1;
+}
+
+message GetUserScriptsResponse
+{
+    map<string, UserScripts> scripts = 1;
+}
+
+service LogicService
+{
+    rpc ListMacros(ListMacrosRequest) returns (ListMacrosResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/macros"
+        };
+    }
+    // Server-stream version of ListMacros.
+    rpc ListMacrosV2(ListMacrosRequest) returns (stream ListMacrosResponse);
+
+    rpc BatchGetMacros(BatchGetMacrosRequest) returns (BatchGetMacrosResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/macros:batchGet"
+        };
+    }
+
+    rpc ChangeMacros(ChangeMacrosRequest) returns (ChangeMacrosResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/macros:change"
+            body: "*"
+        };
+    }
+
+    rpc LaunchMacro(LaunchMacroRequest) returns (LaunchMacroResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/macros:launch"
+            body: "*"
+        };
+    }
+
+    rpc ChangeArmState (ChangeArmStateRequest) returns (ChangeArmStateResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/armstate"
+            body: "*"
+        };
+    }
+
+    rpc GetActiveAlerts(GetActiveAlertsRequest) returns (GetActiveAlertsResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/getactivealerts"
+            body: "*"
+        };
+    }
+
+    rpc BatchGetActiveAlerts(BatchGetActiveAlertsRequest) returns (stream BatchGetActiveAlertsResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/batchgetactivealerts"
+            body: "*"
+        };
+    }
+
+    rpc RaiseAlert(RaiseAlertRequest) returns (RaiseAlertResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/raisealert"
+            body: "*"
+        };
+    }
+
+    rpc BeginAlertReview(BeginAlertReviewRequest) returns (BeginAlertReviewResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/beginalert"
+            body: "*"
+        };
+    }
+
+    rpc CancelAlertReview(CancelAlertReviewRequest) returns (CancelAlertReviewResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/cancelalert"
+            body: "*"
+        };
+    }
+
+    rpc ContinueAlertReview(ContinueAlertReviewRequest) returns (ContinueAlertReviewResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/continuealert"
+            body: "*"
+        };
+    }
+
+    rpc CompleteAlertReview(CompleteAlertReviewRequest) returns (CompleteAlertReviewResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/completealert"
+            body: "*"
+        };
+    }
+
+    rpc EscalateAlert(EscalateAlertRequest) returns (EscalateAlertResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/escalatealert"
+            body: "*"
+        };
+    }
+	
+    rpc ChangeConfig(ChangeConfigRequest) returns (ChangeConfigResponse) {
+        option (google.api.http) = {
+            put: "/v1/logic_service/config"
+            body: "*"
+        };
+    }
+
+    rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/config"
+        };
+    }
+
+    rpc ListCounters(ListCountersRequest) returns (ListCountersResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/counters"
+        };
+    }
+
+    rpc BatchGetCounters(BatchGetCountersRequest) returns (ListCountersResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/counters:batchGet"
+        };
+    }
+
+    rpc ChangeCounters(ChangeCountersRequest) returns (ChangeCountersResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/counters:change"
+            body: "*"
+        };
+    }
+
+    rpc CounterAction(CounterActionRequest) returns (CounterActionResponse) {
+        option (google.api.http) = {
+            post: "/v1/logic_service/counters:action"
+            body: "*"
+        };
+    }
+
+    rpc GetCounterState(GetCounterStateRequest) returns (GetCounterStateResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/counters:getState"
+        };
+    }
+
+    rpc GetCounterGroupState(GetCounterGroupStateRequest) returns (GetCounterGroupStateResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/counters:getGroupState"
+        };
+    }
+
+    rpc GetUserScripts(GetUserScriptsRequest) returns (GetUserScriptsResponse) {
+        option (google.api.http) = {
+            get: "/v1/logic_service/user_scripts"
+        };
+    }
+}

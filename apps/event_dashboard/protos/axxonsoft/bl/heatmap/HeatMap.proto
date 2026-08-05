@@ -1,0 +1,131 @@
+syntax = "proto3";
+package axxonsoft.bl.heatmap;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/heatmap";
+
+import "google/api/annotations.proto";
+import "axxonsoft/bl/primitive/Primitives.proto";
+import "axxonsoft/bl/events/EventHistory.proto";
+import "axxonsoft/bl/vmda/VMDA.proto";
+
+enum EResultType
+{
+    RESULT_TYPE_DATA = 0;
+    RESULT_TYPE_IMAGE = 1;
+    RESULT_TYPE_FULL = 2;
+}
+
+message BuildHeatmapRequest
+{
+    string access_point = 1;
+    string camera_ID = 2;
+    string dt_posix_start_time = 3;
+    string dt_posix_end_time = 4;
+    string query = 5;
+    primitive.SizeInt mask_size = 6;
+    EResultType result_type = 7;
+    primitive.SizeInt image_size = 8;
+}
+
+message BuildHeatmapResponse
+{
+    bool result = 1;
+    repeated uint32 heatmap = 2;
+    bytes image_data = 3;
+}
+
+message BuildEventsHeatmapRequest
+{
+    string access_point = 1;
+    string dt_start_time = 2;
+    string dt_end_time = 3;
+    events.SearchFilterArray filters = 4;
+    primitive.SizeInt mask_size = 5;
+    EResultType result_type = 6;
+    primitive.SizeInt image_size = 7;
+}
+
+message BuildEventsHeatmapResponse
+{
+    bool result = 1;
+    repeated uint32 heatmap = 2;
+    bytes image_data = 3;
+}
+
+message DataSource
+{
+    string access_point = 1;
+    string query = 2;
+}
+
+message DataSourceArray
+{
+    repeated DataSource data_sources = 1;
+}
+
+message BuildFloorHeatmapRequest
+{
+    string map_guid = 1;
+    string access_point = 2;
+    string dt_start_time = 3;
+    string dt_end_time = 4;
+    primitive.SizeInt mask_size = 5;
+    EResultType result_type = 6;
+    primitive.SizeInt image_size = 7;
+    
+    oneof data
+    {
+        events.SearchFilterArray filters = 15;
+        DataSourceArray data_sources = 16;
+    }
+}
+
+message BuildFloorHeatmapResponse
+{
+    bool result = 1;
+    repeated uint32 heatmap = 2;
+    bytes image_data = 3;
+}
+
+message ExecuteHeatmapQueryRequest
+{
+	string camera_ID = 1;
+	string dt_posix_start_time = 2;
+	string dt_posix_end_time = 3;
+	string query = 4;
+}
+
+message ExecuteHeatmapQueryResponse
+{
+	repeated vmda.Interval intervals = 1;
+	string progress = 2;
+	repeated uint32 heatmap = 3;
+	string origin = 4;
+}
+
+service HeatMapService
+{
+    // interface HeatMapBuilder
+    rpc BuildHeatmap(BuildHeatmapRequest) returns (BuildHeatmapResponse) {
+        option (google.api.http) = {
+            post: "/v1/heatmap:build"
+            body: "*"
+        };
+    }
+
+    rpc BuildEventsHeatmap(BuildEventsHeatmapRequest) returns (BuildEventsHeatmapResponse) {
+        option (google.api.http) = {
+            post: "/v1/events-heatmap:build"
+            body: "*"
+        };
+    }
+
+    rpc BuildFloorHeatmap(BuildFloorHeatmapRequest) returns (BuildFloorHeatmapResponse) {
+        option (google.api.http) = {
+            post: "/v1/floor-heatmap:build"
+            body: "*"
+        };
+    }
+
+    rpc ExecuteHeatmapQuery(ExecuteHeatmapQueryRequest) returns (stream ExecuteHeatmapQueryResponse);
+}

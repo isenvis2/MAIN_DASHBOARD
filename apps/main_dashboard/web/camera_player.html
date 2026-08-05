@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Camera HLS Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js"></script>
+  <script>
+    // HLS.js 로드 실패 시 보조 CDN을 순차적으로 시도합니다. Chrome/Edge에서는 HLS.js가 우선입니다.
+    (function ensureHlsJs() {
+      if (window.Hls) return;
+      const candidates = [
+        'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.18/hls.min.js',
+        'https://unpkg.com/hls.js@1.5.18/dist/hls.min.js'
+      ];
+      let i = 0;
+      function loadNext() {
+        if (window.Hls || i >= candidates.length) return;
+        const s = document.createElement('script');
+        s.src = candidates[i++];
+        s.async = false;
+        s.onerror = loadNext;
+        document.head.appendChild(s);
+      }
+      window.addEventListener('load', loadNext, { once: true });
+    })();
+  </script>
+  <style>
+    html, body { margin:0; padding:0; width:100%; height:100%; background:#020617; color:#e2e8f0; font-family:Segoe UI, Arial, sans-serif; overflow:hidden; }
+    .wrap { width:100%; height:100%; display:flex; flex-direction:column; }
+    .topbar { height:44px; display:flex; align-items:center; gap:12px; padding:0 14px; background:#0f172a; border-bottom:1px solid #334155; flex-shrink:0; }
+    body.embed-mode .topbar { display:none; }
+    .title { font-size:13px; font-weight:800; }
+    .meta { font-size:11px; color:#94a3b8; }
+    .stage { flex:1; min-height:0; position:relative; display:flex; align-items:center; justify-content:center; background:#000; }
+    video { width:100%; height:100%; background:#000; display:block; }
+    .controls {
+      position:absolute; left:0; right:0; bottom:0; z-index:5;
+      display:flex; align-items:center; gap:10px;
+      padding:10px 14px;
+      background:linear-gradient(to top, rgba(2,6,23,.92), rgba(2,6,23,.55), rgba(2,6,23,0));
+      transition:opacity .18s ease;
+      opacity:1;
+    }
+    .controls.hidden { opacity:0; pointer-events:none; }
+    .audio-btn {
+      display:none; border:1px solid rgba(148,163,184,.45); border-radius:999px;
+      padding:6px 10px; background:rgba(15,23,42,.86); color:#e2e8f0;
+      font-size:12px; font-weight:800; cursor:pointer; white-space:nowrap;
+    }
+    .audio-btn.visible { display:inline-flex; align-items:center; justify-content:center; }
+    .audio-btn.on { border-color:rgba(34,197,94,.75); color:#dcfce7; }
+    .time { min-width:86px; font-size:12px; font-weight:700; color:#e2e8f0; text-align:right; }
+    .seek {
+      -webkit-appearance:none; appearance:none;
+      flex:1 1 auto; height:4px; border-radius:999px; outline:none;
+      background:rgba(148,163,184,.35);
+    }
+    .seek::-webkit-slider-thumb{
+      -webkit-appearance:none; appearance:none;
+      width:12px; height:12px; border-radius:50%; background:#f8fafc; border:1px solid rgba(15,23,42,.7); cursor:pointer;
+    }
+    .seek::-moz-range-thumb{
+      width:12px; height:12px; border-radius:50%; background:#f8fafc; border:1px solid rgba(15,23,42,.7); cursor:pointer;
+    }
+    .status { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:rgba(2,6,23,.92); text-align:center; padding:20px; }
+    .status.hidden { display:none; }
+    body.dashboard-cursor-hidden,
+    body.dashboard-cursor-hidden * { cursor: none !important; }
+    .spinner { width:34px; height:34px; border:3px solid rgba(148,163,184,.25); border-top-color:#60a5fa; border-radius:50%; animation:spin 1s linear infinite; }
+    .msg { font-size:14px; font-weight:700; }
+    .sub { font-size:12px; color:#94a3b8; }
+    @keyframes spin { from { transform:rotate(0deg);} to { transform:rotate(360deg);} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title" id="title">HLS View</div>
+      <div class="meta" id="meta">카메라를 준비 중입니다.</div>
+    </div>
+    <div class="stage">
+      <video id="video" autoplay muted playsinline disablePictureInPicture></video>
+      <div id="controls" class="controls">
+        <input id="seek" class="seek" type="range" min="0" max="1000" value="0" step="1">
+        <button id="audioToggle" class="audio-btn" type="button" title="YTN 음성 켜기">🔇 음성 켜기</button>
+        <div id="timeLabel" class="time">0:00 / 0:00</div>
+      </div>
+      <div id="status" class="status">
+        <div class="spinner"></div>
+        <div class="msg" id="statusMsg">카메라를 선택하세요</div>
+        <div class="sub" id="statusSub">좌측 목록에서 카메라를 선택하면 중앙 화면에서 재생됩니다.</div>
+      </div>
+    </div>
+  </div>
+<script>
+const HLS_API = `${location.protocol === 'https:' ? 'https:' : 'http:'}//${location.hostname || 'localhost'}:8080`;
+function joinUrl(base, path = '') {
+  const b = String(base || '').trim().replace(/\/+$/, '');
+  const p = String(path || '').trim();
+  if (!p) return b;
+  return `${b}/${p.replace(/^\/+/, '')}`;
+}
+const isEmbedMode = new URLSearchParams(location.search).get('embed') === '1';
+if (isEmbedMode) { document.body.classList.add('embed-mode'); }
+(function initCursorAutoHide(idleMs) {
+  let hideTimer = null;
+  const showCursor = () => {
+    document.body.classList.remove('dashboard-cursor-hidden');
+    try { els.controls && els.controls.classList.remove('hidden'); } catch {}
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      document.body.classList.add('dashboard-cursor-hidden');
+      try { els.controls && els.controls.classList.add('hidden'); } catch {}
+    }, idleMs);
+  };
+  ['mousemove','mousedown','mouseup','mouseenter','mouseleave','wheel','touchstart','touchmove','pointermove','keydown'].forEach((evt) => {
+    window.addEventListener(evt, showCursor, { passive: true });
+  });
+  showCursor();
+})(10000);
+const params = new URLSearchParams(location.search);
+const camId = (params.get('camId') || '').trim();
+const els = {
+  video: document.getElementById('video'),
+  title: document.getElementById('title'),
+  meta: document.getElementById('meta'),
+  status: document.getElementById('status'),
+  statusMsg: document.getElementById('statusMsg'),
+  statusSub: document.getElementById('statusSub'),
+  controls: document.getElementById('controls'),
+  seek: document.getElementById('seek'),
+  timeLabel: document.getElementById('timeLabel'),
+  audioToggle: document.getElementById('audioToggle')
+};
+let hls = null;
+let playerUrl = '';
+let recoveryTimer = null;
+let consecutiveHlsErrors = 0;
+let bootToken = 0;
+let userAudioEnabled = false;
+let audioAvailable = false;
+function updateAudioButton() {
+  if (!els.audioToggle) return;
+  els.audioToggle.classList.toggle('visible', audioAvailable);
+  const on = !els.video.muted && Number(els.video.volume || 0) > 0;
+  els.audioToggle.classList.toggle('on', on);
+  els.audioToggle.textContent = on ? '🔊 음성 끄기' : '🔇 음성 켜기';
+  els.audioToggle.title = on ? 'YTN 음성 끄기' : 'YTN 음성 켜기';
+}
+async function setAudioEnabled(enabled) {
+  userAudioEnabled = Boolean(enabled);
+  els.video.muted = !userAudioEnabled;
+  els.video.defaultMuted = !userAudioEnabled;
+  if (userAudioEnabled) els.video.volume = 1.0;
+  updateAudioButton();
+  try { await els.video.play(); } catch {}
+}
+if (els.audioToggle) {
+  els.audioToggle.addEventListener('click', () => setAudioEnabled(els.video.muted || Number(els.video.volume || 0) <= 0));
+  els.video.addEventListener('volumechange', updateAudioButton);
+  updateAudioButton();
+}
+
+els.video.disablePictureInPicture = true;
+els.video.setAttribute('disablePictureInPicture', '');
+function setStatus(msg, sub = '', busy = true) {
+  els.statusMsg.textContent = msg;
+  els.statusSub.textContent = sub || '';
+  els.status.classList.remove('hidden');
+  const spinner = els.status.querySelector('.spinner');
+  if (spinner) spinner.style.display = busy ? 'block' : 'none';
+}
+function hideStatus() { els.status.classList.add('hidden'); }
+async function apiGet(url) {
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`GET failed: ${url}`);
+  return r.json();
+}
+async function apiPost(url, body) {
+  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error || `POST failed: ${url}`);
+  return data;
+}
+function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+function resolveHlsUrl(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+  try {
+    return new URL(value, joinUrl(HLS_API, '/')).toString();
+  } catch {
+    return joinUrl(HLS_API, value);
+  }
+}
+function buildStreamStatusMessage(status) {
+  if (!status || !status.ok) return '변환 상태를 확인하는 중입니다.';
+  const parts = [];
+  parts.push(status.active ? '변환 요청됨' : '변환 대기 목록 없음');
+  parts.push(status.m3u8Exists ? `m3u8 있음(${status.m3u8AgeSec ?? '?'}초 전)` : 'm3u8 없음');
+  parts.push(`segments ${status.segmentCount ?? 0}`);
+  if (status.logClass) parts.push(status.logClass);
+  return parts.join(' · ');
+}
+async function apiStatus(camIdValue) {
+  if (!camIdValue) return null;
+  try {
+    const r = await fetch(`${joinUrl(HLS_API, `/api/streams/status/${encodeURIComponent(camIdValue)}`)}?_ts=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+async function waitForM3U8(url, timeoutMs = 30000, intervalMs = 800, camIdValue = '') {
+  const end = Date.now() + timeoutMs;
+  let lastStatus = null;
+  while (Date.now() < end) {
+    try {
+      const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_ts=' + Date.now(), { method: 'GET', cache: 'no-store' });
+      if (r.ok) return { ready: true, status: lastStatus };
+    } catch {}
+    lastStatus = await apiStatus(camIdValue);
+    if (lastStatus) setStatus('HLS 변환 준비 중...', buildStreamStatusMessage(lastStatus), true);
+    await wait(intervalMs);
+  }
+  lastStatus = await apiStatus(camIdValue) || lastStatus;
+  return { ready: false, status: lastStatus };
+}
+function withCacheBuster(url) {
+  return url + (url.includes('?') ? '&' : '?') + '_reload=' + Date.now();
+}
+function isExplicit404HlsError(data) {
+  const responseCode = Number(data?.response?.code || data?.networkDetails?.status || 0);
+  return responseCode === 404;
+}
+function isSegmentOrPlaylistNetworkError(data) {
+  const details = String(data?.details || '').toLowerCase();
+  const responseCode = Number(data?.response?.code || data?.networkDetails?.status || 0);
+  return responseCode === 404 || details.includes('frag') || details.includes('level') || details.includes('manifest') || details.includes('network');
+}
+function scheduleHardReload(reason, delayMs = 1500) {
+  if (recoveryTimer) return;
+  setStatus('HLS 재연결 중입니다...', `${reason || 'HLS 오류'} · 최신 재생목록으로 다시 연결합니다.`, true);
+  recoveryTimer = setTimeout(() => {
+    recoveryTimer = null;
+    destroyPlayer();
+    boot();
+  }, delayMs);
+}
+function reloadCurrentSource(reason) {
+  if (!hls || !playerUrl) {
+    scheduleHardReload(reason, 1000);
+    return;
+  }
+  try {
+    hls.stopLoad();
+    hls.loadSource(withCacheBuster(playerUrl));
+    hls.startLoad(-1);
+  } catch {
+    scheduleHardReload(reason, 1000);
+  }
+}
+function destroyPlayer() {
+  if (recoveryTimer) { clearTimeout(recoveryTimer); recoveryTimer = null; }
+  try { if (hls) hls.destroy(); } catch {}
+  hls = null;
+  try { els.video.pause(); } catch {}
+  els.video.muted = !userAudioEnabled;
+  els.video.defaultMuted = !userAudioEnabled;
+  if (userAudioEnabled) els.video.volume = 1.0;
+  updateAudioButton();
+  els.video.removeAttribute('src');
+  try { els.video.load(); } catch {}
+}
+function isSafariNativeHlsBrowser() {
+  const ua = navigator.userAgent || '';
+  const vendor = navigator.vendor || '';
+  return /Safari/i.test(ua) && /Apple/i.test(vendor) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS|Android/i.test(ua);
+}
+function isYtnCam() {
+  return String(camId || '').toLowerCase() === 'video1';
+}
+function getLiveBufferMarginSec() {
+  // V77.10: 모든 live HLS viewer가 background 복귀 후 0~1초부터 재생되지 않도록 3초 여유를 둡니다.
+  return 3;
+}
+function getLiveEdgeEnd() {
+  try {
+    if (els.video.seekable && els.video.seekable.length > 0) {
+      return Number(els.video.seekable.end(els.video.seekable.length - 1));
+    }
+  } catch {}
+  const dur = Number(els.video.duration);
+  if (Number.isFinite(dur) && dur > 0) return dur;
+  try { const pos = Number(hls?.liveSyncPosition); if (Number.isFinite(pos) && pos > 0) return pos; } catch {}
+  try { const pos = Number(hls?.latencyController?.liveSyncPosition); if (Number.isFinite(pos) && pos > 0) return pos; } catch {}
+  return Number.NaN;
+}
+function keepCameraBehindLiveEdge(reason = 'live-buffer-margin', force = false) {
+  const video = els.video;
+  const end = getLiveEdgeEnd();
+  const ct = Number(video.currentTime || 0);
+  if (!Number.isFinite(end) || end <= 4 || !Number.isFinite(ct)) return false;
+  const margin = getLiveBufferMarginSec();
+  const distanceFromEnd = end - ct;
+  const behindTooFar = ct < end - 30;
+  const nearStartAfterLongRun = end > 60 && ct < 5;
+  // V77.12: 정상 재생 중 live edge에 가깝다는 이유만으로 dur-3초로 되감지 않습니다.
+  // 3초 반복 loop 방지를 위해 background force, 0~5초 리셋, 30초 이상 지연만 보정합니다.
+  if (force || behindTooFar || nearStartAfterLongRun) {
+    const target = Math.max(0, end - margin);
+    if (Math.abs(target - ct) > 0.5) {
+      try {
+        video.currentTime = target;
+        try { if (hls && typeof hls.startLoad === 'function') hls.startLoad(target); } catch {}
+        try { const p = video.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); } catch {}
+        console.info(`[CAM_BACKGROUND_LIVE_RESUME] cam=${camId} target=${target.toFixed(2)} end=${end.toFixed(2)} current=${ct.toFixed(2)} reason=${reason}`);
+        return true;
+      } catch {}
+    }
+  }
+  return false;
+}
+function resumeFromBackground(reason = 'background-resume') {
+  keepCameraBehindLiveEdge(reason, true);
+  setTimeout(() => keepCameraBehindLiveEdge(reason + ':delayed', true), 1200);
+}
+function startPlayback(url) {
+  destroyPlayer();
+  playerUrl = url;
+  consecutiveHlsErrors = 0;
+  if (window.Hls && window.Hls.isSupported()) {
+    const ytnMode = isYtnCam();
+    hls = new Hls({
+      lowLatencyMode: false,
+      ...(ytnMode ? { liveSyncDuration: 3, liveMaxLatencyDuration: 10 } : { liveSyncDurationCount: 6, liveMaxLatencyDurationCount: 18 }),
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+      manifestLoadingTimeOut: 10000,
+      fragLoadingTimeOut: 12000,
+      fragLoadingMaxRetry: 6,
+      manifestLoadingMaxRetry: 6,
+      levelLoadingMaxRetry: 6
+    });
+    hls.loadSource(withCacheBuster(url));
+    hls.attachMedia(els.video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      els.video.muted = !userAudioEnabled;
+      els.video.defaultMuted = !userAudioEnabled;
+      if (userAudioEnabled) els.video.volume = 1.0;
+      updateAudioButton();
+      els.video.play().catch(() => {});
+    });
+    hls.on(Hls.Events.FRAG_LOADED, () => { consecutiveHlsErrors = 0; keepCameraBehindLiveEdge('FRAG_LOADED'); });
+    hls.on(Hls.Events.FRAG_CHANGED, () => { keepCameraBehindLiveEdge('FRAG_CHANGED'); });
+    hls.on(Hls.Events.LEVEL_LOADED, () => { keepCameraBehindLiveEdge('LEVEL_LOADED'); });
+    hls.on(Hls.Events.ERROR, (_event, data) => {
+      console.warn('[CAM HLS ERROR]', data);
+      const is404 = isExplicit404HlsError(data);
+      const networkish = isSegmentOrPlaylistNetworkError(data);
+      if (!data?.fatal) {
+        if (is404) {
+          consecutiveHlsErrors += 1;
+          reloadCurrentSource('segment/playlist 404 감지');
+        } else if (networkish) {
+          consecutiveHlsErrors += 1;
+          if (consecutiveHlsErrors >= 2) reloadCurrentSource('segment/playlist 지연');
+          else { try { hls.startLoad(-1); } catch {} }
+        }
+        return;
+      }
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        consecutiveHlsErrors += 1;
+        if (isExplicit404HlsError(data)) reloadCurrentSource('segment/playlist 404 감지');
+        else if (consecutiveHlsErrors >= 2) reloadCurrentSource('네트워크 오류');
+        else { try { hls.startLoad(-1); } catch { scheduleHardReload('네트워크 오류', 1000); } }
+        return;
+      }
+      if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        try { hls.recoverMediaError(); } catch { scheduleHardReload('미디어 오류', 1000); }
+        return;
+      }
+      scheduleHardReload('복구 불가 HLS 오류', 1000);
+    });
+    return;
+  }
+  const nativeCapable = els.video.canPlayType('application/vnd.apple.mpegurl');
+  if (isSafariNativeHlsBrowser() && nativeCapable) {
+    els.video.src = withCacheBuster(url);
+    els.video.play().catch(() => {});
+    return;
+  }
+  throw new Error('HLS.js가 로드되지 않았습니다. 네트워크/CDN 접근 또는 hls.js 스크립트 로드를 확인하세요.');
+}
+
+function fmtTime(sec) {
+  if (!Number.isFinite(sec) || sec < 0) return '0:00';
+  const total = Math.floor(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+let seeking = false;
+function refreshControls() {
+  const dur = Number.isFinite(els.video.duration) ? els.video.duration : 0;
+  const cur = Number.isFinite(els.video.currentTime) ? els.video.currentTime : 0;
+  if (!seeking) {
+    const v = dur > 0 ? Math.max(0, Math.min(1000, Math.round((cur / dur) * 1000))) : 0;
+    els.seek.value = String(v);
+  }
+  els.timeLabel.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+}
+['loadedmetadata','durationchange','timeupdate','progress','canplay','playing','pause','seeking','seeked'].forEach((evt) => {
+  els.video.addEventListener(evt, () => { refreshControls(); keepCameraBehindLiveEdge(evt); });
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeFromBackground('visibilitychange'); });
+window.addEventListener('focus', () => resumeFromBackground('window-focus'));
+window.addEventListener('pageshow', () => resumeFromBackground('pageshow'));
+els.seek.addEventListener('input', () => {
+  seeking = true;
+  const dur = Number.isFinite(els.video.duration) ? els.video.duration : 0;
+  const ratio = Number(els.seek.value) / 1000;
+  const preview = dur > 0 ? dur * ratio : 0;
+  els.timeLabel.textContent = `${fmtTime(preview)} / ${fmtTime(dur)}`;
+});
+els.seek.addEventListener('change', () => {
+  const dur = Number.isFinite(els.video.duration) ? els.video.duration : 0;
+  const ratio = Number(els.seek.value) / 1000;
+  if (dur > 0) {
+    try { els.video.currentTime = dur * ratio; } catch {}
+  }
+  seeking = false;
+  refreshControls();
+});
+
+async function boot() {
+  const myToken = ++bootToken;
+  if (!camId) {
+    els.title.textContent = 'HLS View';
+    els.meta.textContent = '카메라 미선택';
+    setStatus('카메라를 선택하세요', '좌측 목록에서 카메라를 선택하면 중앙 화면에서 재생됩니다.', false);
+    return;
+  }
+  try {
+    setStatus('카메라 정보를 확인하는 중입니다...', camId, true);
+    const cams = await apiGet(joinUrl(HLS_API, '/api/cameras'));
+    const cam = Array.isArray(cams.cameras) ? cams.cameras.find((item) => item.id === camId) : null;
+    audioAvailable = String(cam?.sourceType || '').toLowerCase() === 'rtsp+' || camId === 'video1';
+    updateAudioButton();
+    els.title.textContent = cam ? `HLS View · ${cam.name || cam.id}` : `HLS View · ${camId}`;
+    els.meta.textContent = cam ? `${cam.id} · ${cam.status || 'UNKNOWN'}` : camId;
+    setStatus('스트림 요청 중입니다...', cam ? `${cam.name || cam.id}` : camId, true);
+    const resp = await apiPost(joinUrl(HLS_API, '/api/streams/request'), { camId });
+    const hlsUrl = resolveHlsUrl(resp?.hls || `/media/${camId}/stream.m3u8`);
+    const shouldWait = Boolean(resp?.waitForReady);
+    if (shouldWait) {
+      setStatus('HLS 준비를 기다리는 중입니다...', hlsUrl, true);
+      const readyInfo = await waitForM3U8(hlsUrl, 60000, 1000, camId);
+      if (!readyInfo.ready) {
+        const statusMsg = buildStreamStatusMessage(readyInfo.status);
+        throw new Error(`HLS 준비 시간 초과 · ${statusMsg}`);
+      }
+    }
+    if (myToken !== bootToken) return;
+    startPlayback(hlsUrl);
+    hideStatus();
+  } catch (err) {
+    console.error(err);
+    destroyPlayer();
+    setStatus('재생에 실패했습니다.', `${err?.message || String(err)} · 5초 후 다시 시도합니다.`, true);
+    setTimeout(boot, 5000);
+  }
+}
+window.addEventListener('beforeunload', () => { destroyPlayer(); });
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+syntax = "proto3";
+package axxonsoft.bl.domain;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/domain";
+
+import "google/api/annotations.proto";
+
+service DomainManager
+{
+    rpc EnumerateNodes (EnumerateNodesRequest) returns (EnumerateNodesResponse) {
+          option (google.api.http) = {
+            get: "/v1/domain/nodes:enumerate"
+        };
+    };
+
+    rpc AddNode (AddNodeRequest) returns (AddNodeResponse) {
+        option (google.api.http) = {
+            post: "/v1/domain/nodes:add"
+            body: "*"
+        };
+    };
+
+    rpc DropNode (DropNodeRequest) returns (DropNodeResponse) {
+        option (google.api.http) = {
+            post: "/v1/domain/nodes:drop"
+            body: "*"
+        };
+    };
+
+    rpc ProclaimDomain (ProclaimDomainRequest) returns (ProclaimDomainResponse) {
+        option (google.api.http) = {
+            post: "/v1/domain:proclaim"
+            body: "*"
+        };
+    };
+}
+
+message Domain
+{
+    string name = 1;
+    string display_name = 3;
+    bool activated = 2;
+}
+
+message Node
+{
+    string name = 1;
+    string display_name = 6;
+    NodeStateEnum.NodeState state = 2;
+    NodeSystemIntegrityStateEnum.NodeSystemIntegrityState integrity_state = 3;
+    repeated string grpc_endpoints = 4;
+    repeated string corba_endpoints = 5;
+}
+
+message NodeStateEnum
+{
+    enum NodeState
+    {
+        UNSPECIFIED = 0;
+        UNKNOWN = 1;
+        STARTED = 2;
+        STOPPED = 3;
+        CRASHED = 4;
+        ALIEN = 5;
+        FORBIDDEN = 6;
+    };
+}
+
+message NodeSystemIntegrityStateEnum
+{
+    enum NodeSystemIntegrityState
+    {
+        UNSPECIFIED = 0;
+        UNKNOWN = 1;
+        TRUSTED = 2;
+        COMPROMISED = 3;
+    };
+}
+
+message EnumerateNodesRequest
+{
+}
+
+message EnumerateNodesResponse
+{
+    Domain domain = 1;
+    
+    // Domain members
+    repeated Node nodes = 2;
+
+    // Known free nodes
+    repeated Node free_nodes = 3;
+
+    // Known transient (or alien) nodes
+    repeated Node other_nodes = 4;
+}
+
+message AddNodeRequest
+{
+    // Name of the node to add.
+    string node_name = 1;
+
+    // Optional. Specify the way of the operation.
+    //  
+    // If the option is missed, the node is being added by its name if the node is known.
+    //
+    // If the option is specified, the field `node_name` is not necessary, but if provided
+    // it will be used for comparison with the real name of the node to add.
+    oneof option
+    {
+        // Use CORBA API to communicate with the node to add.
+        CorbaInterfaceOption corba_interface = 2;
+    }
+
+    message CorbaInterfaceOption
+    {
+        // CORBA endpoints  of the node to add.
+        // Each endpoint usually starts with "iiop:1.2@".
+        repeated string endpoints = 1;
+    }
+}
+
+message AddNodeResponse
+{
+    enum EStatus
+    {
+        OK = 0;
+        FAILED = 1;
+        NODE_IS_NOT_FREE = 2;
+    }
+
+    EStatus status = 1;
+
+    // The name of the added node.
+    string node_name = 2;
+}
+
+message DropNodeRequest
+{
+    string node_name = 1;
+}
+
+message DropNodeResponse
+{
+    enum EStatus
+    {
+        OK = 0;
+        FAILED = 1;
+    }
+
+    EStatus status = 1;
+}
+
+message ProclaimDomainRequest
+{
+}
+
+message ProclaimDomainResponse
+{
+    enum EStatus
+    {
+        OK = 0;
+        FAILED = 1;
+        NODE_IS_NOT_FREE = 2;
+    }
+
+    EStatus status = 1;
+
+    // The name of the added domain
+    string domain_name = 2;
+}

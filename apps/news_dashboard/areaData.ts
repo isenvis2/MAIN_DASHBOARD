@@ -1,0 +1,13 @@
+
+import { AreaConfig } from "./types";
+
+export const areaData: AreaConfig = {
+  interestedAreas: [
+    "서울",
+    "부산",
+    "인천",
+    "경기도",
+    "강원",
+    "제주"
+  ]
+};

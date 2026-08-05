@@ -1,0 +1,83 @@
+syntax = "proto3";
+package axxonsoft.bl.notifications;
+
+import "google/api/annotations.proto";
+
+option go_package = "bitbucket.org/Axxonsoft/bl/notifications";
+
+// SendEmail
+message SendEMailRequest
+{
+    string access_point = 1;
+    string subject = 2;
+    string message = 3;
+    repeated string recipients = 4;
+    repeated string attachments = 5;
+}
+
+message SendEMailResponse
+{
+    string guid = 1;
+}
+
+// ActionState
+message GetActionStateRequest
+{
+    string access_point = 1;
+    string guid = 2;
+}
+
+message GetActionStateResponse
+{
+    enum EActionState
+    {
+        AS_NONE = 0;
+        AS_EXECUTING = 1;
+        AS_SUCCEEDED = 2;
+        AS_FAILED = 3;
+    }
+    EActionState action_state = 1;
+}
+
+// SendMode
+message GetSendModeRequest
+{
+    string access_point = 1;
+}
+
+message GetSendModeResponse
+{
+    enum EMailerMode
+    {
+        EM_NONE = 0;
+        EM_SMTP = 1;
+        EM_CLOUD = 2;
+    }
+    EMailerMode mode = 1;
+}
+
+// EMailNotifier service
+service EMailNotifier
+{
+    rpc SendEMail(SendEMailRequest) returns (SendEMailResponse) 
+    {
+        option (google.api.http) = {
+            post: "/v1/notifier/email:send"
+            body: "*"
+        };
+    }
+
+    rpc GetActionState(GetActionStateRequest) returns (GetActionStateResponse)
+    {
+        option (google.api.http) = {
+            get: "/v1/notifier/email/actionstate"
+        };
+    }
+
+    rpc GetSendMode(GetSendModeRequest) returns (GetSendModeResponse)
+    {
+        option (google.api.http) = {
+            get: "/v1/notifier/email/sendmode"
+        };
+    }
+}

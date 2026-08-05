@@ -1,0 +1,40 @@
+syntax = "proto3";
+package axxonsoft.bl.license;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/license";
+
+message Status {
+    // The status code, which should be an enum value of Code.
+    int32 code = 1;
+
+    // A developer-facing error message.
+    string message = 2;
+}
+
+enum Code {
+    // Not an error; returned on success.
+    OK = 0;
+
+    // The license key is not found.
+    NOT_FOUND = 1;
+
+    // The license key is invalid.
+    INVALID = 2;
+
+    // The license key is not suitable to the hardware/environment.
+    MISMATCH = 3;
+
+    // The license key is currently inactive.
+    INACTIVE = 4;
+
+    // The limit of licensed features is exceeded
+    LIMIT_EXCEEDED = 5;
+
+    LEASE_EXPIRED = 6;
+
+    // The license server is currently unavailable.
+    UNAVAILABLE = 7;
+
+    OTHER = 9999;
+};
+

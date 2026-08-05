@@ -1,0 +1,184 @@
+syntax = "proto3";
+package axxonsoft.bl.globaltracker;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/globaltracker";
+
+import "axxonsoft/bl/metadata/MetadataService.proto";
+
+message Image
+{
+  string id = 1; // guid
+  bytes raw = 2; // Currently only JPEG is supported. Leave empty to delete image.
+  bool more = 3; // Shows whether there are more data to transfer.
+  int64 total_raw_data_size = 6; // Total size of the image. Must be provided with the first chunk of image.
+}
+
+message Images
+{
+  repeated Image images = 1;
+}
+
+enum DataType
+{
+  DT_ImageFace = 0;
+  DT_Plate = 2;
+}
+
+// Extended meta info for faces.
+// Can be used when the Profile type is DT_ImageFace
+message FaceMeta
+{
+  enum EGender
+  {
+    UNKNOWN = 0;
+    FEMALE = 1;
+    MALE = 2;
+  }
+
+  int32 age = 1;
+  EGender gender = 2;
+  string full_name = 3;
+  string title = 4;
+  string department = 5;
+  string comment = 6;
+  string additional_comment = 7;
+}
+
+// Some describing information of the Profile
+message Meta
+{
+  string name = 1; // friendly human readable name; will not be changed if empty; will be returned only if you do 'get' request
+  string description = 2; // will not be changed if empty; will be returned only if you do 'get' request
+  oneof extra_data
+  {
+    FaceMeta face_meta = 30; // Can be used when Profile type is DT_ImageFace
+  }
+}
+
+message Profile
+{
+  string id = 1; // guid; must be filled.
+  DataType type = 3;
+  oneof data
+  {
+    Meta data_meta = 10;
+    string data_string = 11; // expected for LPR
+    Images data_images = 12; // expected for Faces. Total size must not exceed 50mb per one Item.
+  }
+}
+
+message GlobalTrackerProfiles
+{
+  string global_tracker_id = 1;
+  double score = 4; // minimal level of score with detected profile; in range [0,1]; default is 0.85; will not be changed if 0 or negative; NO SUPPORT FOR LPR YET; will be returned only if you do 'get' request
+  repeated string profile_ids = 5; // ids to be added to the global tracker's profile list
+  repeated string profile_ids_to_remove = 6; // ids to be removed from the global tracker's profile list.
+}
+
+enum EPacketStatus
+{
+  EPS_SEQUENTIAL = 0;
+  EPS_LAST = 1;
+}
+
+message ChangeGlobalTrackerProfilesRequest
+{
+  GlobalTrackerProfiles globalTrackerProfiles = 1;
+}
+
+message ChangeGlobalTrackerProfilesResponse
+{
+}
+
+message RemovedProfileIds
+{
+  repeated string removed_profile_ids = 1; // guids
+}
+
+message ChangeProfilesRequest
+{
+  // Set always status to EPS_LAST when sending last packet of the session.
+  // Otherwise it can be omitted.
+  EPacketStatus status = 1;
+  oneof data
+  {
+    Profile added_profile = 2;
+    Profile changed_profile = 3;
+    RemovedProfileIds removed_profiles = 4; // guids
+  }
+}
+
+message ChangeProfilesResponse
+{
+  repeated string failed_profiles = 1; // guids
+  repeated string failed_images = 2; // guids
+}
+
+message GetGlobalTrackerProfilesRequest
+{
+  string global_tracker_id = 1;
+}
+
+message GetGlobalTrackerProfilesResponse
+{
+  GlobalTrackerProfiles global_tracker_profiles = 2;
+}
+
+message GetProfileRequest
+{
+  string id = 1;
+  bool load_images = 2;
+}
+
+message GetProfileResponse
+{
+  Profile profile = 2;
+}
+
+message ClearProfilesRequest
+{
+}
+
+message ClearProfilesResponse
+{
+}
+
+message BindGlobalTrackProfileRequest
+{
+  string global_tracker_id = 1;
+  string global_track_id = 2;
+  string profile_id = 3;
+}
+
+message BindGlobalTrackProfileResponse
+{
+}
+
+message GetGlobalTrackBestVisibilityPositionsRequest
+{
+  string global_tracker_id = 1;
+  string global_track_id = 2;
+}
+
+message GetGlobalTrackBestVisibilityPositionsResponse
+{
+  repeated metadata.MapPoint on_map_positions = 1;
+  repeated metadata.CameraFrameArea on_camera_positions = 2;
+}
+
+service GlobalTrackerService
+{
+  rpc ChangeGlobalTrackerProfiles(ChangeGlobalTrackerProfilesRequest) returns (ChangeGlobalTrackerProfilesResponse);
+
+  rpc ChangeProfiles(stream ChangeProfilesRequest) returns (stream ChangeProfilesResponse);
+
+  rpc GetGlobalTrackerProfiles(GetGlobalTrackerProfilesRequest) returns (stream GetGlobalTrackerProfilesResponse);
+  rpc GetProfile(GetProfileRequest) returns (stream GetProfileResponse);
+
+  // Remove all profiles
+  rpc ClearProfiles(ClearProfilesRequest) returns (ClearProfilesResponse);
+
+  rpc BindGlobalTrackProfile(BindGlobalTrackProfileRequest) returns (BindGlobalTrackProfileResponse);
+
+  rpc GetGlobalTrackBestVisibilityPositions(GetGlobalTrackBestVisibilityPositionsRequest) returns (GetGlobalTrackBestVisibilityPositionsResponse);
+}

@@ -1,0 +1,141 @@
+syntax = "proto3";
+package axxonsoft.bl.media;
+
+option go_package = "bitbucket.org/Axxonsoft/bl/media";
+
+// TODO: remove suffix Request becouse it conflicts with current naming conversion
+message QualityOfServiceRequest
+{
+    message OnlyKeyFrames
+    {
+        bool enabled = 1;
+    }
+
+    message FrameRate
+    {
+        float fps = 1;
+        bool preroll = 2; // mark filtered samples as preroll, rather than discard
+    }
+
+    message FrameGeometry
+    {
+        int32 width = 1;
+        int32 height = 2;
+    }
+
+    message Buffer
+    {
+        // buffer start point in time YYYYMMDDTHHMMSS,fffffffff
+        string start = 1;
+        // buffer period in milliseconds
+        uint32 duration = 2;
+        bool discontinuty = 3; // track discontinuty
+    }
+
+    message StartFrom
+    {
+        enum EStartFrom
+        {
+            NextKeyFrame = 0;
+            PrevKeyFrame = 1;
+            Preroll = 2;
+        }
+
+        EStartFrom from = 1;
+    }
+
+    oneof request
+    {
+        OnlyKeyFrames onlyKeyFrames = 1;
+        FrameRate frameRate = 2;
+        FrameGeometry frameGeometry = 3;
+        Buffer buffer = 4;
+        StartFrom startFrom = 5;
+    }
+}
+
+
+// Please make sure to use the same values from MMEndpoint.idl
+enum ENetworkTransport
+{
+    NETWORK_TRANSPORT_INPROC = 0;
+    NETWORK_TRANSPORT_LOCAL = 1;
+    NETWORK_TRANSPORT_TCP = 2;
+    NETWORK_TRANSPORT_UDP = 3;
+    NETWORK_TRANSPORT_MULTICAST = 4;
+    NETWORK_TRANSPORT_AUTO = 5;
+    NETWORK_TRANSPORT_RPC_TUNNEL = 6;
+};
+
+message AllocatorParams
+{
+    uint64 allocator_id = 1;
+    int32 buffer_count = 2;
+    int32 buffer_size = 3;
+    int32 alignment = 4;
+};
+
+message ConnectionInfo
+{
+    message Inproc
+    {
+        uint64 pull_source_ptr = 1;
+    }
+
+    message Local
+    {
+        uint32 port = 1;
+        AllocatorParams allocator = 2;
+    }
+    
+    message TCP
+    {
+        uint32 port = 1;
+        repeated string addresses = 2;
+    };
+
+    message UDP
+    {
+        uint32 control_port = 1;
+        uint32 data_port = 2;
+        string address = 3;
+    };
+
+    message Multicast
+    {
+        string control_iface = 1;
+        uint32 control_port = 2;
+        string data_iface = 3;
+        uint32 data_port = 4;
+    };
+
+    message RPCTunnel
+    {
+        // Seems currently we dont need any aditional info.
+        bool dummy = 1;
+    }
+
+    ENetworkTransport transport = 1;
+
+    oneof data
+    {
+        Inproc inproc_data = 2;
+        Local local_data = 3;
+        TCP tcp_data = 4;
+        UDP udp_data = 5;
+        Multicast multicast_data = 6;
+        RPCTunnel rpc_tunnel_data = 7;
+    }
+}
+
+
+message EndpointRef
+{
+    // Hints where endpoint is located
+    // If accessPoint is empty, then it is treated as inproc object.
+    string access_point = 1;
+    
+    // RPC dependent object reference used for transient MM endpoints.
+    string object_ref = 2;
+}
+
