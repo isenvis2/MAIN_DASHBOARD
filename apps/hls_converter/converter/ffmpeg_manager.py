@@ -307,7 +307,7 @@ PROJECT_ROOT = (BASE_DIR / ".." / ".." / "..").resolve()
 SHARED_DIR = PROJECT_ROOT / "shared"
 
 DEFAULT_CONFIG_FILE = SHARED_DIR / "data" / "camera_list.json"
-DEFAULT_GIS_CONFIG_FILE = SHARED_DIR / "data" / "GISDashBoard.json"
+DEFAULT_GIS_CONFIG_FILE = SHARED_DIR / "config" / "GISDashBoard.json"
 DEFAULT_MEDIA_ROOT = SHARED_DIR / "media"
 DEFAULT_LOGS_DIR = BASE_DIR / "logs"
 

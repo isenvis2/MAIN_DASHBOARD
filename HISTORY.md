@@ -1,3 +1,24 @@
+# 2026-08-07 / RIC_V78_08_gisdashboard_single_source_config
+
+## 수정 내용
+
+- `shared/config/GISDashBoard.json`과 `shared/data/GISDashBoard.json`을 수동으로 동기화해오던 구조를 없애고, `shared/config/GISDashBoard.json` 하나만 남기도록 정리했습니다. (V78.06에서 두 파일의 `hlsWatchdog` 값이 실제로 어긋났던 문제가 재발하지 않도록 원인 자체를 제거)
+- `GISDashBoard.json`은 ffmpeg 경로·HLS 세그먼트 정책·watchdog 임계값 등 정적 설정이라는 점에서 `shared/config/`가 의미상 맞는 위치로 판단해 이쪽을 정본으로 선택했습니다. (반대로 `cameras.json`은 API가 런타임에 쓰는 데이터라 `shared/data/` 단일화를 이미 v75.28에서 결정한 바 있어 이번 정리 대상에서 제외했습니다.)
+- `apps/hls_converter/api/server.js`: `CONFIG_DIR`(`shared/config`) 상수를 추가하고 `PATH_GIS_DASHBOARD`가 `DATA_DIR` 대신 `CONFIG_DIR`을 가리키도록 변경했습니다.
+- `apps/hls_converter/converter/ffmpeg_manager.py`: `DEFAULT_GIS_CONFIG_FILE` 기본값을 `shared/data/GISDashBoard.json`에서 `shared/config/GISDashBoard.json`으로 변경했습니다.
+- `shared/data/GISDashBoard.json`을 삭제했습니다.
+- `infra/scripts/run_all.bat`는 이미 `shared/config/GISDashBoard.json` 경로를 사전 점검하고 있어 수정하지 않았습니다.
+- `docs/README.md`의 관련 경로 표기를 모두 `shared/config/GISDashBoard.json` 기준으로 정리했습니다.
+
+## 검증 내용
+
+- `node --check apps/hls_converter/api/server.js` 통과
+- `python -m py_compile apps/hls_converter/converter/ffmpeg_manager.py` 통과
+- `shared/config/GISDashBoard.json` JSON 문법 검사 통과
+- HLS API 서버를 임시 기동해 `CONFIG_DIR` 경로 로그와 `/api/gis` 계열 응답(ffmpeg 경로, watchdog 설정 등)이 `shared/config/GISDashBoard.json` 값을 정상적으로 반영함을 확인, 이후 프로세스 종료 및 포트 해제 확인
+
+---
+
 # 2026-08-05 / RIC_V78_07_event_dashboard_archive_https
 
 ## 수정 내용

@@ -16,6 +16,7 @@ const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHARED = path.join(ROOT, "shared");
 const DATA_DIR = path.join(SHARED, "data");
+const CONFIG_DIR = path.join(SHARED, "config");
 const MEDIA_DIR = path.join(SHARED, "media");
 const WEB_DIR = path.join(ROOT, "apps", "hls_converter", "web");
 
@@ -115,13 +116,14 @@ console.log("__dirname =", __dirname);
 console.log("ROOT      =", ROOT);
 console.log("WEB_DIR   =", WEB_DIR);
 console.log("DATA_DIR  =", DATA_DIR);
+console.log("CONFIG_DIR=", CONFIG_DIR);
 console.log("MEDIA_DIR =", MEDIA_DIR);
 console.log("====================================");
 
 const PATH_SITES = path.join(DATA_DIR, "sites.json");
 const PATH_CAMERAS = path.join(DATA_DIR, "cameras.json");
 const PATH_ACTIVE = path.join(DATA_DIR, "camera_list.json");
-const PATH_GIS_DASHBOARD = path.join(DATA_DIR, "GISDashBoard.json");
+const PATH_GIS_DASHBOARD = path.join(CONFIG_DIR, "GISDashBoard.json");
 const PATH_PRECHECK = path.join(DATA_DIR, "stream_precheck.json");
 const TMP = (p) => `${p}.tmp`;
 

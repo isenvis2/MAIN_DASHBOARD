@@ -4,7 +4,7 @@ Current package: **RIC_V78_05_root_gitignore_and_credential_hardening** 사용 �
 
 - V78.05: 저장소 루트 `.gitignore`/`.gitattributes`를 추가하고, Event Dashboard의 AxxonONE 계정 정보를 `.env`로 분리했으며, Report Dashboard의 승인/반려/무효처리 API에 백엔드 암호 검증을 추가했습니다.
 - V78.03: 뉴스/SMS/날씨 외부 API 키를 백엔드에서만 사용하도록 정리하고, 서버 백엔드 + 클라이언트 프론트엔드 분리 실행을 지원합니다.
-- V78.02: HLS 변환용 FFmpeg/FFprobe 실행 파일 경로를 `shared/data/GISDashBoard.json`의 `hlsTools`에서 직접 지정할 수 있게 했습니다.
+- V78.02: HLS 변환용 FFmpeg/FFprobe 실행 파일 경로를 `shared/config/GISDashBoard.json`의 `hlsTools`에서 직접 지정할 수 있게 했습니다.
 - V78.01: Report Dashboard를 메인 화면 모달로 연결하고, 닫은 뒤 메인 보고서 버튼으로 포커스를 복귀합니다. 첨부 cameras(4).json을 새 카메라 기준 파일로 반영했습니다.
 - V78.00: Main Dashboard에 Report Dashboard를 통합하고, 3200 포트·JSON 환경 설정·통합 실행/상태 확인을 제공합니다.
 - V77.12: YTN 라이브 패널의 live edge 반복 seek 문제를 수정했습니다.
@@ -130,7 +130,6 @@ apps\sms_dashboard\run_frontend_client.bat http://서버IP:3005
 설정 파일:
 
 ```text
-shared/data/GISDashBoard.json
 shared/config/GISDashBoard.json
 ```
 
@@ -274,7 +273,7 @@ http://서버IP:8080/api/streams/status/cam003
 
 ## V76.13 HLS API DEBUG/NORMAL 로그 모드
 
-- `shared/data/GISDashBoard.json`의 `hlsLogging.mode`로 로그 상세도를 선택합니다.
+- `shared/config/GISDashBoard.json`의 `hlsLogging.mode`로 로그 상세도를 선택합니다.
 - `normal` 모드는 운영용 기본값입니다. 시작/종료, request/release, release-all, Watchdog 재시작, 오류/경고 같은 중요 로그만 기록합니다.
 - `debug` 모드는 문제 추적용입니다. HTTP 요청, precheck 결과, 상태 확인 같은 세부 로그까지 `shared/logs/hls_api.log`에 기록합니다.
 - 로그 파일은 `shared/logs/hls_api.log`에 저장되며, 크기가 커지면 `hls_api.log.1`, `hls_api.log.2` 형태로 rotation됩니다.
@@ -366,8 +365,8 @@ ric_v8/
     event_dashboard/     이벤트 스냅샷 대시보드
     report_dashboard/    보고서 작성·결재 대시보드
   shared/
-    data/                cameras.json, GISDashBoard.json, camera_list.json
-    config/              modules.json, ports.json 등 공통 설정
+    data/                cameras.json, camera_list.json
+    config/              modules.json, ports.json, GISDashBoard.json 등 공통 설정
     media/               ffmpeg가 생성하는 HLS 출력 위치
   infra/scripts/         Windows 실행/점검 스크립트
   docs/README.md         현재 버전 사용 설명서
@@ -530,7 +529,7 @@ ric_v8\infra\scripts\check_remote_ports.bat 192.168.0.199
 |---|---|
 | `shared/data/cameras.json` | 유일한 카메라 원본 |
 | `shared/data/camera_list.json` | ffmpeg 변환 런타임 상태 |
-| `shared/data/GISDashBoard.json` | GIS/HLS 설정, 변환 엔진, HLS 출력, 오디오 설정 |
+| `shared/config/GISDashBoard.json` | GIS/HLS 설정, 변환 엔진, HLS 출력, 오디오 설정 |
 | `shared/config/modules.json` | 메인 대시보드 iframe 주소 템플릿 |
 | `shared/config/ports.json` | 포트 정의 |
 | `apps/report_dashboard/config/report_dashboard.json` | Report Dashboard 서버 바인딩·포트·DB 경로·요청 크기 설정 |
@@ -548,7 +547,7 @@ shared/data/cameras.json
 
 ## 7. HLS 변환 설정
 
-`shared/data/GISDashBoard.json`의 `hlsConversion`에서 RTSP 변환 엔진을 선택합니다.
+`shared/config/GISDashBoard.json`의 `hlsConversion`에서 RTSP 변환 엔진을 선택합니다.
 
 ```json
 {
