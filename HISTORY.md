@@ -1,3 +1,18 @@
+# 2026-08-07 / RIC_V78_09_cameras_json_config_mirror_removed
+
+## 수정 내용
+
+- 초기 저장소 임포트(2026-08-05) 때 예전 zip 스냅샷이 그대로 들어오면서 `shared/config/cameras.json`이 재유입되어 있었습니다. 이 파일은 v75.28에서 이미 "카메라 목록 원본은 `shared/data/cameras.json` 하나만 사용한다"고 정리하며 삭제했던 파일이라, 그 결정을 다시 적용해 삭제했습니다.
+- 삭제 전 `apps/hls_converter/api/server.js`(PATH_CAMERAS), `apps/hls_converter/web|legacy_web/js/app.js`, `infra/scripts/run_all.bat`을 모두 재확인했고, `shared/config/cameras.json`을 읽는 코드는 없음을 확인했습니다. `cameras.json`은 API가 런타임에 쓰기도 하는 데이터라 `GISDashBoard.json`(순수 정적 설정, V78.08에서 `shared/config`로 단일화)과는 반대로 `shared/data`가 맞는 위치입니다.
+- `docs/README.md`의 "카메라 기준 파일" 절에서 `shared/config/cameras.json`을 "배포용 미러"로 설명하던 부분을 삭제하고, `shared/data/cameras.json`이 유일한 원본임을 명시했습니다.
+
+## 검증 내용
+
+- 저장소 전체에서 `cameras\.json` 참조를 재검색해 코드 경로(server.js, app.js, run_all.bat)가 전부 `shared/data/cameras.json`만 가리킴을 확인
+- 삭제 후 `shared/config/` 디렉터리에 `cameras.json`이 없음을 확인
+
+---
+
 # 2026-08-07 / RIC_V78_08_gisdashboard_single_source_config
 
 ## 수정 내용

@@ -487,9 +487,8 @@ http://<서버IP>:3200/
 
 ## 카메라 기준 파일 (V78.01)
 
-- `shared/data/cameras.json`은 HLS API와 Converter가 실제로 읽는 기준 카메라 목록입니다.
-- `shared/config/cameras.json`은 배포·검토용 미러이며, 두 파일은 동일하게 유지해야 합니다.
-- 이번 버전에는 첨부된 `cameras(4).json` 내용을 두 위치에 동일하게 반영했습니다.
+- `shared/data/cameras.json`은 HLS API와 Converter가 실제로 읽는 유일한 카메라 목록입니다(v75.28부터 단일 원본).
+- `shared/config/cameras.json`은 존재하지 않습니다. 카메라 추가/주소 변경/좌표 변경은 `shared/data/cameras.json`만 수정합니다.
 
 ---
 
