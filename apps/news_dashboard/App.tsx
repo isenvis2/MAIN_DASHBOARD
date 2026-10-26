@@ -24,6 +24,28 @@ import type {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
+// Analyzing hundreds of news items at once opens that many simultaneous HTTPS
+// connections from the backend to Gemini and most of them fail outright
+// ("Max retries exceeded"). Capping concurrency keeps every request on the
+// backend's happy path.
+const AI_ANALYSIS_CONCURRENCY = 6;
+
+async function runWithConcurrencyLimit<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const item = items[cursor];
+      cursor += 1;
+      await worker(item);
+    }
+  });
+  await Promise.all(runners);
+}
+
 
 function formatKoreanDate(date: Date): string {
   return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -93,6 +115,7 @@ const App: React.FC = () => {
   const [embedIntroVisible, setEmbedIntroVisible] = useState(isNewsEmbedMode);
   const embedIntroDismissedRef = useRef(false);
   const mountedRef = useRef(true);
+  const analyzingIdsRef = useRef<Set<string>>(new Set());
   const autoSyncStartedRef = useRef(false);
   const usingCachedDataRef = useRef(false);
   const scrollAnimationFrameRef = useRef<number | null>(null);
@@ -112,6 +135,7 @@ const App: React.FC = () => {
 
   const triggerAiAnalysis = useCallback(
     async (news: NewsItem, reportDays: number) => {
+      analyzingIdsRef.current.add(news.id);
       setAnalyzingIds((prev) => {
         const next = new Set(prev);
         next.add(news.id);
@@ -137,6 +161,8 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('[AI ANALYSIS FAILED]', error);
       } finally {
+        analyzingIdsRef.current.delete(news.id);
+
         if (!mountedRef.current) return;
 
         setAnalyzingIds((prev) => {
@@ -162,11 +188,13 @@ const App: React.FC = () => {
           setNewsList(visibleNews);
         }
 
-        for (const item of visibleNews) {
-          const hasCached = Boolean(aiCache[item.id]?.summary);
-          if (!hasCached) {
-            void triggerAiAnalysis(item, currentConfig.ReportDate);
-          }
+        const pendingItems = visibleNews.filter(
+          (item) => !aiCache[item.id]?.summary && !analyzingIdsRef.current.has(item.id),
+        );
+        if (pendingItems.length > 0) {
+          void runWithConcurrencyLimit(pendingItems, AI_ANALYSIS_CONCURRENCY, (item) =>
+            triggerAiAnalysis(item, currentConfig.ReportDate),
+          );
         }
       } else {
         visibleNews = applyNonAiDefaults(news);

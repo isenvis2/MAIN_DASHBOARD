@@ -338,11 +338,19 @@ async function resolveValidPageRange(
   cache: PageCache,
 ): Promise<{ start: number; end: number; validPages: number[]; warning?: string; rateLimited?: boolean }> {
   const rowsPerPage = config.RowsPerPage;
-  const scanStart = Math.max(1, config.StartDayPage - config.BackwardScanLimit);
-  const scanEnd = Math.min(
+  // Scan both the previously known window and a window anchored at the current upstream
+  // tail (resolvedLastPage). Without the tail window, StartDayPage/EndPage can never catch
+  // up once the upstream feed grows faster than BackwardScanLimit/ForwardScanLimit per run,
+  // permanently missing the pages where recent news actually lives.
+  const legacyStart = Math.max(1, config.StartDayPage - config.BackwardScanLimit);
+  const legacyEnd = Math.min(
     resolvedLastPage,
     Math.max(config.EndPage + config.ForwardScanLimit, config.StartDayPage, config.EndPage),
   );
+  const tailStart = Math.max(1, resolvedLastPage - config.BackwardScanLimit - config.ForwardScanLimit);
+  const tailEnd = resolvedLastPage;
+  const scanStart = Math.min(legacyStart, tailStart);
+  const scanEnd = Math.max(legacyEnd, tailEnd);
   const validPages: number[] = [];
   let warning: string | undefined;
   let rateLimited = false;
@@ -363,7 +371,10 @@ async function resolveValidPageRange(
   }
 
   if (validPages.length === 0) {
-    const fallback = Math.min(Math.max(config.StartDayPage, 1), resolvedLastPage);
+    // Anchor the fallback at the current upstream tail rather than the stale StartDayPage,
+    // so the next run's saved pageState keeps tracking the growing edge instead of getting
+    // stuck at a page the feed has already moved past.
+    const fallback = Math.max(1, resolvedLastPage);
     return { start: fallback, end: fallback, validPages: [], warning, rateLimited };
   }
 

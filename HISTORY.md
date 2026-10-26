@@ -1,3 +1,59 @@
+# 2026-10-02 / RIC_V78_11_news_dashboard_ai_analysis_concurrency_limit
+
+## 증상
+
+- 뉴스 목록은 정상 표시되지만 AI 요약("AI INSIGHT")이 나오지 않거나 "요약을 생성할 수 없습니다."만 표시됨.
+
+## 원인 분석
+
+- `apps/news_dashboard/App.tsx`의 `applyNewsToScreen()`이 AI 캐시에 없는 뉴스 전체를 동시성 제한 없이 한꺼번에 `triggerAiAnalysis()`로 발사하고 있었습니다.
+- 현재 수집 범위(579~585페이지) 기준 `ReportDate`(30일) 조건에 맞는 뉴스가 실제로 468건이었고, 캐시가 비어 있는 최초 로드/리셋 직후에는 이 468건이 동시에 분석 요청으로 나갑니다.
+- 직접 재현한 결과: `/api/ai/analyze`를 동시 15~40개 호출하면 전부 성공하지만, 동시 100개를 호출하면 100개 전부 `HTTPSConnectionPool(host='generativelanguage.googleapis.com', port=443): Max retries exceeded` 오류로 실패했습니다. `server.py`의 `analyze_news_with_ai()`는 이 실패를 HTTP 200 + `fallback_ai_payload('요약을 생성할 수 없습니다.')`로 조용히 처리하므로, 프런트엔드에는 에러 없이 요약이 비거나 고정 문구만 보이는 것으로 나타났습니다.
+- Gemini API 키/모델 설정 자체는 정상임을 직접 호출로 확인했습니다(문제는 동시 연결 폭주였지 인증/모델 문제가 아님).
+
+## 수정 내용
+
+- `apps/news_dashboard/App.tsx`: 모듈 레벨에 `runWithConcurrencyLimit()` 헬퍼와 `AI_ANALYSIS_CONCURRENCY = 6` 상수를 추가해, AI 분석 대상이 몇 건이든 항상 최대 6건만 동시에 진행하도록 큐잉했습니다(처리 중인 요청이 끝나는 대로 다음 항목을 투입, 전체를 기다리지 않고 비차단으로 동작).
+- `triggerAiAnalysis()`가 시작/종료 시 `analyzingIdsRef`(Set)에도 기록하도록 해서, `applyNewsToScreen()`이 이미 진행 중인 항목을 캐시 유무만으로 중복 발사하지 않도록 했습니다.
+- `applyNewsToScreen()`의 무제한 for-loop 발사 로직을 캐시에 없고 진행 중이지도 않은 항목만 추려 `runWithConcurrencyLimit()`에 넘기는 방식으로 교체했습니다.
+
+## 검증 내용
+
+- `npx tsc --noEmit` 통과
+- `npm run build`(vite build) 통과
+- 실제 뉴스 100건을 동시성 6으로(수정된 로직과 동일한 방식) 백엔드에 통과시켜 100건 전부 정상 요약 생성(실패 0건) 확인 — 수정 전 동일 100건을 무제한 동시 호출했을 때는 100건 전부 실패했던 것과 대조
+- 테스트 후 프로세스 종료 및 포트 해제 확인
+
+---
+
+# 2026-10-01 / RIC_V78_10_news_dashboard_stale_page_window_fix
+
+## 증상
+
+- 뉴스 대시보드에 "표시할 뉴스가 없습니다 / 통신 상태 또는 뉴스 수집 조건을 확인해 주세요" 메시지가 계속 표시되고 실제 뉴스가 뜨지 않음.
+
+## 원인 분석
+
+- `apps/news_dashboard/services/newsService.ts`의 `resolveValidPageRange()`가 최근(`ReportDate`=30일 이내) 뉴스를 찾는 범위를 `[StartDayPage-BackwardScanLimit, EndPage+ForwardScanLimit]`(±3페이지)로만 스캔하고 있었습니다.
+- `App.tsx`가 매 실행마다 결과(`StartDayPage/EndPage/LastPage`)를 `NewsDashBoard.json`에 그대로 저장하는데, 업스트림(safetydata.go.kr) 데이터가 스캔 폭(±3페이지)보다 훨씬 빠르게 늘어나면서(`LastPage` 539→585, 46페이지 증가) 날짜 조건에 맞는 뉴스를 못 찾으면 `fallback = 기존 StartDayPage`를 그대로 되돌려주는 구조라, 한 번 뒤처지면 다음 실행에서도 동일한 위치에 고착되어 영구적으로 "뉴스 없음" 상태가 되는 자기 고착 버그였습니다.
+- 실제 업스트림 데이터로 확인: 527페이지는 2026-06-09~06-18 데이터(30일 조건에 한참 못 미침), 579~585페이지에 2026-09~10월 데이터가 있었고 586페이지는 비어 있어(`count:0`) 585가 실제 마지막 페이지임을 확인했습니다. 저장된 `EndPage(527)`와 실제 최신 데이터 구간(579~585) 사이에 58페이지 간극이 있었던 것이 직접 원인입니다.
+
+## 수정 내용
+
+- `apps/news_dashboard/NewsDashBoard.json`: `StartDayPage`를 527→579, `EndPage`를 527→585로 즉시 재설정해 당장 최신 뉴스가 다시 보이도록 복구했습니다.
+- `apps/news_dashboard/services/newsService.ts`의 `resolveValidPageRange()`: 기존 `StartDayPage/EndPage` 기준 창(legacy window)과 `resolvedLastPage`(이번 실행에서 확인한 실제 업스트림 최신 페이지) 기준 창(tail window)을 함께(합집합으로) 스캔하도록 변경했습니다. 업스트림이 아무리 빨리 늘어나도 항상 최신 페이지 근처를 확인하게 되어 더 이상 뒤처진 위치에 고착되지 않습니다.
+- 같은 함수에서 유효 페이지를 하나도 못 찾았을 때의 fallback을 `config.StartDayPage`(정체된 옛 값) 대신 `resolvedLastPage`(실제 최신 페이지)로 변경해, 다음 실행의 저장값이 항상 최신 구간을 따라가도록 했습니다.
+
+## 검증 내용
+
+- `npx tsc --noEmit` 통과
+- `npm run build`(vite build) 통과
+- `shared`가 아닌 `apps/news_dashboard/NewsDashBoard.json` JSON 문법 검사 통과
+- 백엔드(`server.py`)를 임시 포트(8077)로 기동해 `/api/health`(API 키 설정 확인), `/api/config`(재설정된 페이지 값 반영 확인), `/api/news?pageNo=527,579,582,585,586`을 직접 호출해 527페이지는 오래된 데이터, 579~585페이지에 최근 데이터, 586페이지는 빈 결과임을 실측으로 확인
+- 테스트 후 프로세스 종료 및 포트 해제 확인
+
+---
+
 # 2026-08-07 / RIC_V78_09_cameras_json_config_mirror_removed
 
 ## 수정 내용
